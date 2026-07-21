@@ -1,0 +1,2763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0f172a">
+    <link rel="icon" type="image/png" href="https://i.postimg.cc/QdHVGGj7/image.png">
+    <link rel="apple-touch-icon" href="https://i.postimg.cc/QdHVGGj7/image.png">
+    <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoiU3VuZ3JvdyBEYXNoYm9hcmQiLCJzaG9ydF9uYW1lIjoiU3VuZ3JvdyIsInN0YXJ0X3VybCI6Ii4iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImJhY2tncm91bmRfY29sb3IiOiIjZjhmYWZjIiwidGhlbWVfY29sb3IiOiIjMGYxNzJhIiwiaWNvbnMiOlt7InNyYyI6Imh0dHBzOi8vaS5wb3N0aW1nLmNjL1FkSFZHR2o3L2ltYWdlLnBuZyIsInNpemVzIjoiMTkyeDE5MiIsInR5cGUiOiJpbWFnZS9wbmcifSx7InNyYyI6Imh0dHBzOi8vaS5wb3N0aW1nLmNjL1FkSFZHR2o3L2ltYWdlLnBuZyIsInNpemVzIjoiNTEyeDUxMiIsInR5cGUiOiJpbWFnZS9wbmcifV19">
+
+    <title>Sungrow Field Service Dashboard</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: { brand: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7', 900: '#0c4a6e' } }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes scan { 0% { top: -10%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 110%; opacity: 0; } }
+        .tech-logo { animation: pulse-glow 2s infinite ease-in-out; }
+        @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 15px rgba(14, 165, 233, 0.3); transform: scale(1); } 50% { box-shadow: 0 0 40px rgba(14, 165, 233, 0.8); transform: scale(1.05); } }
+        .star-display { color: #f1c40f; letter-spacing: 1px; }
+        .star-display .empty { color: #e2e8f0; }
+        
+        .allowance-input { border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px 8px; font-size: 0.875rem; width: 100%; transition: border-color 0.2s; }
+        .allowance-input:focus { outline: none; border-color: #0ea5e9; ring: 1px solid #0ea5e9; }
+        .allowance-select { border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px; font-size: 0.875rem; background-color: #f8fafc; cursor: pointer;}
+
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); z-index: 9999; display: flex; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans h-screen flex overflow-hidden">
+
+    <!-- Modal Notification -->
+    <div id="genericMessageModal" class="modal-overlay" style="display:none;">
+        <div class="modal-content text-center">
+            <h2 id="genericMessageModalTitle" class="text-xl font-bold text-slate-800 mb-2">Notification</h2>
+            <p id="genericMessageModalText" class="text-sm text-slate-600 mb-6 leading-relaxed"></p>
+            <div id="genericModalLinkArea" class="mb-4"></div>
+            <button onclick="closeGenericMessageModal()" class="bg-brand-600 hover:bg-brand-700 text-white px-6 py-2 rounded-lg font-medium transition w-full sm:w-auto">Close</button>
+        </div>
+    </div>
+
+    <!-- Modal Delete Confirmation -->
+    <div id="confirmDeleteModal" class="modal-overlay" style="display:none;">
+        <div class="modal-content text-center">
+            <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <h2 class="text-xl font-bold text-slate-800 mb-2">Are you sure?</h2>
+            <p id="confirmDeleteText" class="text-sm text-slate-600 mb-6 leading-relaxed"></p>
+            <div class="flex gap-3 justify-center">
+                <button onclick="closeConfirmDelete()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-5 py-2.5 rounded-lg font-medium transition flex-1">Cancel</button>
+                <button id="btn-confirm-delete" onclick="executeDelete()" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-lg font-medium transition flex-1">Yes, Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Edit Engineer -->
+    <div id="editEngineerModal" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <h2 class="text-lg font-bold text-slate-800 mb-4">Update Engineer</h2>
+            <input type="hidden" id="edit-eng-oldname">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
+                <input type="text" id="edit-eng-newname" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 p-2.5">
+            </div>
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-slate-700 mb-1">Position</label>
+                <select id="edit-eng-newpos" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 p-2.5">
+                    <option value="">-- Select Position --</option>
+                    <option value="Service Engineer">Service Engineer</option>
+                    <option value="Junior Service Engineer">Junior Service Engineer</option>
+                    <option value="Senior Service Engineer">Senior Service Engineer</option>
+                    <option value="Assistant Service Manager">Assistant Service Manager</option>
+                    <option value="Service Manager">Service Manager</option>
+                    <option value="Service Partner">Service Partner (Subcon)</option>
+                </select>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="closeEditModals()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg font-medium transition flex-1">Cancel</button>
+                <button id="btn-save-eng" onclick="executeEditEngineer()" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg font-medium transition flex-1">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Edit Specific Equipment -->
+    <div id="editEquipmentRecordModal" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <h2 class="text-lg font-bold text-slate-800 mb-4">Edit Project Record</h2>
+            <input type="hidden" id="edit-eq-oldproject">
+            <input type="hidden" id="edit-eq-oldmodel">
+            <input type="hidden" id="edit-eq-oldserial">
+            
+            <div class="mb-4">
+                <label class="block text-xs font-medium text-slate-500 mb-1">Region</label>
+                <input type="text" id="edit-eq-region" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg p-2.5">
+            </div>
+            <div class="mb-4">
+                <label class="block text-xs font-medium text-slate-500 mb-1">Project Name</label>
+                <input type="text" id="edit-eq-project" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg p-2.5">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-1">Product Model</label>
+                <input type="text" id="edit-eq-model" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg p-2.5">
+            </div>
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-slate-700 mb-1">Product Code/Serial</label>
+                <input type="text" id="edit-eq-serial" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg p-2.5">
+            </div>
+            <div class="flex gap-3">
+                <button onclick="closeEditModals()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg font-medium flex-1">Cancel</button>
+                <button id="btn-save-edit-eq" onclick="executeEditSpecificEquipment()" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg font-medium flex-1">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Add Manual Row (Business Trip Summary) -->
+    <div id="addManualRowModal" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <h2 class="text-lg font-bold text-slate-800 mb-4">Add Manual Row</h2>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-1">Date</label>
+                <input type="date" id="manual-row-date" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 p-2.5">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-1">GSP Ticket Number</label>
+                <input type="text" id="manual-row-ticket" placeholder="e.g., GSP-12345" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 p-2.5">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-1">Price (USD)</label>
+                <input type="number" id="manual-row-price" step="0.5" placeholder="0.00" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 p-2.5">
+            </div>
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-slate-700 mb-1">Remark</label>
+                <input type="text" id="manual-row-remark" placeholder="e.g., Toll / Parking / Others" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 p-2.5">
+            </div>
+            <div class="flex gap-3">
+                <button onclick="closeAddManualRowModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg font-medium transition flex-1">Cancel</button>
+                <button id="btn-save-manual-row" onclick="executeAddManualRow()" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg font-medium transition flex-1">Add</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebar-backdrop" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-30 hidden md:hidden transition-opacity" onclick="toggleSidebar()"></div>
+
+    <aside id="sidebar" class="w-64 bg-slate-900 text-white flex-col shadow-xl z-40 fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out flex">
+        <div class="p-6 border-b border-slate-800 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-white p-1 rounded-lg w-10 h-10 flex items-center justify-center shrink-0">
+                    <img src="https://i.postimg.cc/QdHVGGj7/image.png" alt="Sungrow Logo" class="max-h-full max-w-full">
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg tracking-wide">Sungrow</h1>
+                    <p class="text-xs text-slate-400">Field Service Monitor</p>
+                </div>
+            </div>
+            <button onclick="toggleSidebar()" class="md:hidden text-slate-400 hover:text-white p-2">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+        </div>
+
+        <nav class="flex-1 py-4 px-3 space-y-1 overflow-y-auto" id="sidebar-nav">
+            <button onclick="switchTab('overview')" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 text-sm font-medium rounded-lg bg-brand-600 text-white transition-colors" data-target="overview">
+                <i class="fa-solid fa-chart-pie w-5 text-center"></i><span>Overview</span>
+            </button>
+            <button onclick="switchTab('monitoring')" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 text-sm font-medium rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-target="monitoring">
+                <i class="fa-solid fa-table-list w-5 text-center"></i><span>Job Monitoring</span>
+            </button>
+            <button onclick="switchTab('issues')" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 text-sm font-medium rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-target="issues">
+                <i class="fa-solid fa-triangle-exclamation w-5 text-center"></i><span>Pending / Issues</span>
+            </button>
+            <button onclick="switchTab('performance')" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 text-sm font-medium rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-target="performance">
+                <i class="fa-solid fa-users-gear w-5 text-center"></i><span>Performance</span>
+            </button>
+            <button onclick="switchTab('documents')" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 text-sm font-medium rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-target="documents">
+                <i class="fa-solid fa-file-signature w-5 text-center"></i><span>Document</span>
+            </button>
+            <button onclick="switchTab('allowance')" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 text-sm font-medium rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-target="allowance">
+                <i class="fa-solid fa-wallet w-5 text-center"></i><span>Allowance & Claims</span>
+            </button>
+            <button onclick="switchTab('settings')" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 text-sm font-medium rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-target="settings">
+                <i class="fa-solid fa-gear w-5 text-center"></i><span>Settings</span>
+            </button>
+        </nav>
+
+        <div class="px-4 pb-4 flex flex-col gap-2">
+            <button onclick="logout()" class="w-full flex items-center justify-center space-x-2 bg-red-600/20 hover:bg-red-600/40 text-red-400 hover:text-red-300 py-2.5 rounded-lg text-sm font-medium transition-colors border border-red-500/30 shadow-sm">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i><span>Logout</span>
+            </button>
+            <a href="https://sungrowutilityservice-ai.github.io/fieldreportform/" class="w-full flex items-center justify-center space-x-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white py-2.5 rounded-lg text-sm font-medium transition-colors border border-slate-700 shadow-sm">
+                <i class="fa-solid fa-arrow-left-long"></i><span>Back to Form</span>
+            </a>
+        </div>
+
+        <div class="p-4 border-t border-slate-800">
+            <div class="flex items-center space-x-3">
+                <div id="sidebar-user-initial" class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-sm font-bold">U</div>
+                <div class="text-sm"><p id="sidebar-user-name" class="font-medium">User</p><p id="sidebar-user-role" class="text-xs text-slate-400">Role</p></div>
+            </div>
+        </div>
+        <div class="px-4 py-3 bg-slate-950 text-center text-[10px] text-slate-500 border-t border-slate-800">&copy; 2026 All Right Reserved by Sungrow</div>
+    </aside>
+
+    <main class="flex-1 flex flex-col h-screen overflow-hidden relative">
+        <header class="bg-white shadow-sm border-b border-slate-200 py-3 px-4 md:px-6 flex flex-col lg:flex-row lg:justify-between lg:items-center z-10 gap-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <button onclick="toggleSidebar()" class="md:hidden text-slate-500 hover:text-slate-800 p-1"><i class="fa-solid fa-bars text-xl"></i></button>
+                    <h2 id="page-title" class="text-lg md:text-xl font-semibold text-slate-800">Overview Dashboard</h2>
+                </div>
+            </div>
+            <div id="header-date-filter" class="flex items-center space-x-2 md:space-x-3 overflow-x-auto pb-1 lg:pb-0 no-scrollbar w-full lg:w-auto transition-opacity">
+                
+                <div class="flex items-center bg-slate-50 px-2 py-1 rounded-md border border-slate-200 shrink-0">
+                    <i class="fa-solid fa-industry text-slate-400 text-xs mr-2"></i>
+                    <select id="global-project" class="text-xs bg-slate-50 text-slate-700 outline-none focus:ring-0 font-medium min-w-[110px] cursor-pointer" onchange="applyGlobalFilters()">
+                        <option value="">All Projects</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center bg-slate-50 p-1 rounded-md border border-slate-200 shrink-0">
+                    <div class="flex items-center">
+                        <span class="text-xs text-slate-500 mx-1 md:mx-2 font-medium">Start:</span>
+                        <input type="date" id="date-start" class="text-xs bg-white border border-slate-300 rounded px-1.5 py-1 md:px-2 text-slate-700 outline-none focus:border-brand-500" onchange="applyGlobalFilters()">
+                    </div>
+                    <span class="text-xs text-slate-400 mx-1 md:mx-2">-</span>
+                    <div class="flex items-center">
+                        <span class="text-xs text-slate-500 mr-1 md:mr-2 font-medium hidden sm:inline">End:</span>
+                        <input type="date" id="date-end" class="text-xs bg-white border border-slate-300 rounded px-1.5 py-1 md:px-2 text-slate-700 outline-none focus:border-brand-500" onchange="applyGlobalFilters()">
+                    </div>
+                    <button onclick="clearGlobalFilters()" class="text-slate-400 hover:text-red-500 px-2 md:px-3 border-l border-slate-200 ml-1 md:ml-2" title="Reset Filters"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="text-sm text-slate-500 hidden xl:block shrink-0 px-2"><i class="fa-regular fa-clock mr-1"></i> <span id="current-time"></span></div>
+                <button onclick="fetchData()" class="shrink-0 bg-white border border-slate-300 text-slate-700 px-3 py-1.5 rounded-md text-sm font-medium hover:bg-slate-50 transition flex items-center">
+                    <i class="fa-solid fa-rotate-right sm:mr-2 text-brand-500"></i> <span class="hidden sm:inline">Refresh</span>
+                </button>
+            </div>
+        </header>
+
+        <div id="loading-overlay" class="fixed inset-0 bg-slate-900/85 backdrop-blur-md z-[100] flex flex-col items-center justify-center">
+            <div class="relative flex items-center justify-center mb-8 mt-[-50px]">
+                <div class="absolute rounded-full border-t-2 border-r-2 border-brand-500 animate-spin" style="width: 140px; height: 140px;"></div>
+                <div class="absolute rounded-full border-b-2 border-l-2 border-brand-300 animate-[spin_3s_linear_reverse]" style="width: 160px; height: 160px;"></div>
+                <div class="bg-white p-4 rounded-full w-28 h-28 flex items-center justify-center relative overflow-hidden z-10 tech-logo">
+                    <img src="https://i.postimg.cc/QdHVGGj7/image.png" alt="Sungrow Loading" class="w-full h-full object-contain relative z-10">
+                    <div class="absolute left-0 right-0 h-[2px] bg-brand-400 opacity-60 shadow-[0_0_12px_3px_#0ea5e9] animate-[scan_1.5s_linear_infinite] z-20"></div>
+                </div>
+            </div>
+            <div class="flex flex-col items-center">
+                <h3 class="text-brand-400 font-bold tracking-[0.2em] uppercase text-sm mb-3 animate-pulse">System Initializing</h3>
+                <div class="flex space-x-2">
+                    <div class="w-2 h-2 bg-brand-500 rounded-full animate-bounce" style="animation-delay: 0s"></div>
+                    <div class="w-2 h-2 bg-brand-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                    <div class="w-2 h-2 bg-brand-500 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
+                </div>
+                <p id="loading-subtitle" class="text-slate-400 text-xs mt-4 font-mono">Syncing securely with database...</p>
+            </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-6 relative">
+
+            <!-- TAB 1: OVERVIEW -->
+            <div id="tab-overview" class="tab-content active">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex items-center justify-between">
+                        <div><p class="text-sm font-medium text-slate-500 mb-1">Total Reports</p><h3 class="text-3xl font-bold text-slate-800" id="kpi-total">-</h3></div>
+                        <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-xl"><i class="fa-solid fa-clipboard-list"></i></div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex items-center justify-between">
+                        <div><p class="text-sm font-medium text-slate-500 mb-1">Completed Jobs</p><h3 class="text-3xl font-bold text-emerald-600" id="kpi-completed">-</h3></div>
+                        <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center text-xl"><i class="fa-solid fa-check-double"></i></div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex items-center justify-between">
+                        <div><p class="text-sm font-medium text-slate-500 mb-1">Pending Client Approval</p><h3 class="text-3xl font-bold text-amber-500" id="kpi-pending">-</h3></div>
+                        <div class="w-12 h-12 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center text-xl"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex items-center justify-between">
+                        <div><p class="text-sm font-medium text-slate-500 mb-1">Avg. Service Rating</p><h3 class="text-3xl font-bold text-yellow-500" id="kpi-rating">-</h3></div>
+                        <div class="w-12 h-12 bg-yellow-50 text-yellow-500 rounded-full flex items-center justify-center text-xl"><i class="fa-solid fa-star"></i></div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+                        <h3 class="text-base font-semibold text-slate-800 mb-4">Jobs by Job Status</h3>
+                        <div class="relative h-64 w-full flex justify-center"><canvas id="statusChart"></canvas></div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 lg:col-span-2">
+                        <h3 class="text-base font-semibold text-slate-800 mb-4">Report Submissions (Recent Dates)</h3>
+                        <div class="relative h-64 w-full"><canvas id="trendChart"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                        <h3 class="text-base font-semibold text-slate-800">Recent Reports</h3>
+                        <button onclick="switchTab('monitoring')" class="text-sm text-brand-600 hover:text-brand-800 font-medium">View All &rarr;</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left">
+                            <thead class="text-xs text-slate-500 uppercase bg-slate-50">
+                                <tr><th class="px-6 py-3 font-medium">Report Date</th><th class="px-6 py-3 font-medium">Project Name</th><th class="px-6 py-3 font-medium">Ticket No</th><th class="px-6 py-3 font-medium">Service Engineer</th><th class="px-6 py-3 font-medium">Job Status</th></tr>
+                            </thead>
+                            <tbody id="recent-table-body" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: JOB MONITORING -->
+            <div id="tab-monitoring" class="tab-content">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden flex flex-col h-full">
+                    <div class="p-6 border-b border-slate-100 bg-slate-50/50">
+                        <div class="flex flex-col md:flex-row gap-4 items-end">
+                            <div class="flex-1 w-full">
+                                <label class="block text-xs font-medium text-slate-500 mb-1">Search Project / Ticket No</label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none"><i class="fa-solid fa-search text-slate-400"></i></div>
+                                    <input type="text" id="search-job" class="bg-white border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block w-full pl-10 p-2.5" placeholder="Search..." onkeyup="filterJobs()">
+                                </div>
+                            </div>
+                            <div class="w-full md:w-48">
+                                <label class="block text-xs font-medium text-slate-500 mb-1">Job Status Filter</label>
+                                <select id="filter-status" class="bg-white border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block w-full p-2.5" onchange="filterJobs()">
+                                    <option value="">All Job Status</option>
+                                </select>
+                            </div>
+                            <button onclick="filterJobs()" class="bg-slate-800 hover:bg-slate-900 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition">Filter</button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto flex-1">
+                        <table class="w-full text-sm text-left">
+                            <thead class="text-xs text-slate-500 uppercase bg-slate-100 sticky top-0 z-10 shadow-sm">
+                                <tr>
+                                    <th class="px-6 py-4 font-medium whitespace-nowrap">Report ID</th>
+                                    <th class="px-6 py-4 font-medium whitespace-nowrap">Report Date</th>
+                                    <th class="px-6 py-4 font-medium">Project / EPCC</th>
+                                    <th class="px-6 py-4 font-medium">Ticket No</th>
+                                    <th class="px-6 py-4 font-medium">Service Job Date</th>
+                                    <th class="px-6 py-4 font-medium">Service Engineer</th>
+                                    <th class="px-6 py-4 font-medium">Task</th>
+                                    <th class="px-6 py-4 font-medium">Job Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="monitoring-table-body" class="divide-y divide-slate-100 bg-white"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: PENDING / ISSUES -->
+            <div id="tab-issues" class="tab-content">
+                <div class="mb-6 flex justify-between items-end">
+                    <div>
+                        <h3 class="text-lg font-semibold text-slate-800">Pending Jobs Log</h3>
+                        <p class="text-sm text-slate-500 mt-1">Jobs with Job Status = Pending, along with the given reason.</p>
+                    </div>
+                    <div class="bg-red-50 text-red-600 px-4 py-2 rounded-lg font-bold text-sm border border-red-100 flex items-center">
+                        <i class="fa-solid fa-circle-exclamation mr-2"></i><span id="issue-count-badge">0</span> Pending Jobs
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 gap-4" id="issues-container"></div>
+            </div>
+
+            <!-- TAB 4: PERFORMANCE -->
+            <div id="tab-performance" class="tab-content">
+                <!-- 4 KPI Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5 flex items-center">
+                        <div class="w-12 h-12 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center text-xl mr-4 shrink-0"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                        <div><p class="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-0.5">Avg Job Duration</p><h3 class="text-2xl font-bold text-slate-800" id="perf-kpi-duration">0 Days</h3></div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5 flex items-center">
+                        <div class="w-12 h-12 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center text-xl mr-4 shrink-0"><i class="fa-solid fa-server"></i></div>
+                        <div><p class="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-0.5">Equipments Serviced</p><h3 class="text-2xl font-bold text-slate-800" id="perf-kpi-eq">0</h3></div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5 flex items-center">
+                        <div class="w-12 h-12 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center text-xl mr-4 shrink-0"><i class="fa-solid fa-screwdriver-wrench"></i></div>
+                        <div><p class="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-0.5">Parts Replaced</p><h3 class="text-2xl font-bold text-slate-800" id="perf-kpi-parts">0</h3></div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5 flex items-center">
+                        <div class="w-12 h-12 bg-red-50 text-red-500 rounded-full flex items-center justify-center text-xl mr-4 shrink-0"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                        <div><p class="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-0.5">Total Pending</p><h3 class="text-2xl font-bold text-slate-800" id="perf-kpi-pending">0</h3></div>
+                    </div>
+                </div>
+
+                <!-- First Row Charts (Bar & Doughnut) -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+                        <h3 class="text-sm font-bold text-slate-800 mb-4">Jobs Completed by Service Engineer</h3>
+                        <div class="relative h-64 w-full"><canvas id="staffChart"></canvas></div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+                        <h3 class="text-sm font-bold text-slate-800 mb-4">Top Projects Distribution</h3>
+                        <div class="relative h-64 w-full flex justify-center"><canvas id="clientChart"></canvas></div>
+                    </div>
+                </div>
+
+                <!-- Second Row Charts (Equipments & Spare Parts) -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+                        <h3 class="text-sm font-bold text-slate-800 mb-4">Top Problematic Equipment Models</h3>
+                        <div class="relative h-64 w-full"><canvas id="equipmentChart"></canvas></div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+                        <h3 class="text-sm font-bold text-slate-800 mb-4">Top Consumed Spare Parts</h3>
+                        <div class="relative h-64 w-full"><canvas id="sparePartChart"></canvas></div>
+                    </div>
+                </div>
+                
+                <!-- Third Row (Detailed Table) -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden mb-6 flex flex-col">
+                    <div class="px-6 py-4 border-b border-slate-100 bg-white"><h3 class="text-sm font-bold text-slate-800">Service Engineer Workload Summary</h3></div>
+                    <div class="overflow-x-auto flex-1">
+                        <table class="w-full text-sm text-left">
+                            <thead class="text-[10px] text-slate-500 uppercase bg-slate-50 sticky top-0 z-10 tracking-widest border-b border-slate-100">
+                                <tr>
+                                    <th class="px-6 py-4 font-bold">Service Engineer</th>
+                                    <th class="px-6 py-4 font-bold text-center">Total Jobs</th>
+                                    <th class="px-6 py-4 font-bold text-center">Avg Rating</th>
+                                    <th class="px-6 py-4 font-bold">Recent Job Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="staff-table-body" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 5: DOCUMENT -->
+            <div id="tab-documents" class="tab-content">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div class="p-6 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                        <h3 class="text-base font-semibold text-slate-800">Document & Approval Tracking</h3>
+                        <input type="text" id="search-doc" class="bg-white border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block w-64 p-2" placeholder="Search Report ID..." onkeyup="filterDocs()">
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left">
+                            <thead class="text-xs text-slate-500 uppercase bg-slate-100">
+                                <tr>
+                                    <th class="px-6 py-4 font-medium">Report Info</th>
+                                    <th class="px-6 py-4 font-medium">Client Acknowledgement</th>
+                                    <th class="px-6 py-4 font-medium">Draft PDF</th>
+                                    <th class="px-6 py-4 font-medium">Approval Status</th>
+                                    <th class="px-6 py-4 font-medium">Final PDF</th>
+                                    <th class="px-6 py-4 font-medium text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="document-table-body" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 6: ALLOWANCE -->
+            <div id="tab-allowance" class="tab-content">
+                <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 gap-4 border-b border-slate-200 pb-5">
+                    <div>
+                        <h3 class="text-lg font-semibold text-slate-800">Allowance & Claims Generation</h3>
+                        <p class="text-sm text-slate-500 mt-1">Please select Start and End Dates to generate the daily claims list.</p>
+                    </div>
+                    
+                    <div class="flex flex-col sm:flex-row flex-wrap xl:flex-nowrap gap-3 w-full xl:w-auto items-start sm:items-center">
+                        <div class="flex items-center bg-white px-3 py-2 rounded-lg border border-slate-200 shadow-sm w-full sm:w-auto">
+                            <i class="fa-regular fa-calendar-days text-brand-500 mr-2"></i>
+                            <div class="flex items-center">
+                                <span class="text-xs text-slate-500 mr-1 font-medium">Start:</span>
+                                <input type="date" id="claim-start" class="text-xs bg-slate-50 border border-slate-300 rounded px-1.5 py-1 text-slate-700 outline-none focus:border-brand-500 font-bold" onchange="generateAllowanceClaim()">
+                            </div>
+                            <span class="text-xs text-slate-400 mx-2">-</span>
+                            <div class="flex items-center">
+                                <span class="text-xs text-slate-500 mr-1 font-medium">End:</span>
+                                <input type="date" id="claim-end" class="text-xs bg-slate-50 border border-slate-300 rounded px-1.5 py-1 text-slate-700 outline-none focus:border-brand-500 font-bold" onchange="generateAllowanceClaim()">
+                            </div>
+                            <button onclick="clearClaimDateFilter()" class="text-slate-400 hover:text-red-500 px-2 border-l border-slate-200 ml-2" title="Reset Date"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+
+                        <div class="flex items-center bg-white px-3 py-2 rounded-lg border border-slate-200 shadow-sm w-full sm:w-auto">
+                            <label class="text-sm font-medium text-slate-600 mr-2 whitespace-nowrap"><i class="fa-solid fa-user-tie text-blue-500 mr-1"></i> Engineer</label>
+                            <select id="claim-engineer" class="bg-slate-50 border border-slate-300 text-slate-900 text-sm font-bold rounded focus:ring-brand-500 focus:border-brand-500 block p-1.5 max-w-[150px]" onchange="generateAllowanceClaim()">
+                                <option value="">All Engineers</option>
+                            </select>
+                        </div>
+
+                        <div class="flex items-center bg-white px-3 py-2 rounded-lg border border-slate-200 shadow-sm w-full sm:w-auto">
+                            <label class="text-sm font-medium text-slate-600 mr-2 whitespace-nowrap"><i class="fa-solid fa-money-bill-transfer text-emerald-500 mr-1"></i> Rate (USD 1 = MYR)</label>
+                            <input type="number" id="exchange-rate" value="4.15" step="0.01" class="bg-slate-50 border border-slate-300 text-slate-900 text-sm font-bold rounded focus:ring-brand-500 focus:border-brand-500 block w-20 p-1.5 text-center" onchange="calculateAllowanceTotals()" onkeyup="if(event.key === 'Enter') calculateAllowanceTotals()">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="api-holiday-loader" class="hidden mb-4 text-xs font-medium text-amber-600 bg-amber-50 p-2 rounded border border-amber-200 animate-pulse">
+                    <i class="fa-solid fa-satellite-dish mr-1"></i> Fetching Malaysia Public Holiday data...
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex items-center justify-between border-l-4 border-l-blue-500">
+                        <div>
+                            <p class="text-sm font-medium text-slate-500 mb-1">Total Allowance (MYR)</p>
+                            <h3 class="text-3xl font-bold text-slate-800" id="kpi-allowance-myr">RM 0.00</h3>
+                        </div>
+                        <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-xl"><i class="fa-solid fa-money-bill-wave"></i></div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex items-center justify-between border-l-4 border-l-emerald-500">
+                        <div>
+                            <p class="text-sm font-medium text-slate-500 mb-1">Total Allowance (USD)</p>
+                            <h3 class="text-3xl font-bold text-emerald-600" id="kpi-allowance-usd">$ 0.00</h3>
+                        </div>
+                        <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center text-xl"><i class="fa-solid fa-dollar-sign"></i></div>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap justify-end gap-2 mb-4">
+                    <button onclick="exportAllowanceExcel()" class="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition flex items-center shadow-sm">
+                        <i class="fa-solid fa-file-excel mr-2 text-emerald-600"></i> Excel only
+                    </button>
+                    <button onclick="exportAllowancePDF()" class="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition flex items-center shadow-sm">
+                        <i class="fa-solid fa-file-pdf mr-2 text-red-500"></i> PDF only
+                    </button>
+                    <button id="btn-submit-claim" onclick="submitClaimToSystem()" class="bg-brand-600 hover:bg-brand-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition flex items-center shadow-sm ml-2">
+                        <i class="fa-solid fa-cloud-arrow-up mr-2"></i> Generate Claims & Save
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden" id="allowance-export-area">
+                    <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-wrap justify-between items-center gap-3">
+                        <div>
+                            <h3 class="text-base font-semibold text-slate-800">Business Trip Summary</h3>
+                            <p id="allowance-date-subtitle" class="text-sm text-slate-600 font-medium mt-1">Date: -</p>
+                        </div>
+                        <button onclick="promptAddManualRow()" class="bg-white border border-brand-200 hover:bg-brand-50 text-brand-600 px-4 py-2 rounded-lg text-sm font-medium transition flex items-center shadow-sm shrink-0">
+                            <i class="fa-solid fa-plus mr-2"></i> Add Manual Row
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left" id="allowanceTable">
+                            <thead class="text-xs text-slate-500 uppercase bg-slate-50">
+                                <tr>
+                                    <th class="px-4 py-3 font-medium w-12 border-r border-slate-100">No</th>
+                                    <th class="px-4 py-3 font-medium min-w-[100px] border-r border-slate-100">Date</th>
+                                    <th class="px-4 py-3 font-medium min-w-[140px] border-r border-slate-100">GSP Ticket Number</th>
+                                    <th class="px-4 py-3 font-medium min-w-[200px] border-r border-slate-100">Job Description</th>
+                                    <th class="px-4 py-3 font-medium min-w-[150px] border-r border-slate-100">Accommodation</th>
+                                    <th class="px-4 py-3 font-medium min-w-[150px] border-r border-slate-100">Receipt Upload</th>
+                                    <th class="px-4 py-3 font-medium min-w-[100px] text-center border-r border-slate-100">Price (USD)</th>
+                                    <th class="px-4 py-3 font-medium min-w-[100px] text-center border-r border-slate-100">Price (MYR)</th>
+                                    <th class="px-4 py-3 font-medium min-w-[150px]">Remark</th>
+                                </tr>
+                            </thead>
+                            <tbody id="allowance-table-body" class="divide-y divide-slate-100">
+                                <tr><td colspan="9" class="px-6 py-8 text-center text-slate-500">Please select Start and End Dates above to generate the claims table.</td></tr>
+                            </tbody>
+                            <tfoot class="bg-slate-50 font-bold text-slate-800 border-t border-slate-200">
+                                <tr>
+                                    <td colspan="6" class="px-6 py-4 text-right uppercase tracking-wider border-r border-slate-200">Grand Total:</td>
+                                    <td class="px-4 py-4 text-center text-emerald-600 text-base border-r border-slate-200" id="footer-total-usd">0.00</td>
+                                    <td class="px-4 py-4 text-center text-blue-600 text-base border-r border-slate-200" id="footer-total-myr">0.00</td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 7: SETTINGS -->
+            <div id="tab-settings" class="tab-content">
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold text-slate-800">System Configuration</h3>
+                    <p class="text-sm text-slate-500 mt-1">Manage user account and system database without opening Google Sheets.</p>
+                </div>
+                
+                <div class="flex space-x-2 mb-6 border-b border-slate-200 pb-3 overflow-x-auto no-scrollbar">
+                    <button onclick="switchSettingsTab('account')" id="btn-set-acc" class="px-4 py-2 text-sm font-medium rounded-lg bg-brand-600 text-white transition-colors shrink-0">My Account</button>
+                    <button onclick="switchSettingsTab('engineer')" id="btn-set-eng" class="px-4 py-2 text-sm font-medium rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors shrink-0">Engineer Management</button>
+                    <button onclick="switchSettingsTab('project')" id="btn-set-proj" class="px-4 py-2 text-sm font-medium rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors shrink-0">Project & Equipment</button>
+                </div>
+
+                <!-- VIEW 1: MY ACCOUNT (GANTI PASSWORD) -->
+                <div id="settings-account-view" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 h-fit">
+                        <h3 class="text-base font-semibold text-slate-800 mb-4">Change Password</h3>
+                        <p class="text-xs text-slate-500 mb-4">Keep your account secure by updating your password below.</p>
+
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Current Password</label>
+                            <input type="password" id="acc-old-pass" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg p-2.5 focus:ring-brand-500 focus:border-brand-500 outline-none transition" placeholder="Enter your current password">
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-slate-700 mb-1">New Password</label>
+                            <input type="password" id="acc-new-pass" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg p-2.5 focus:ring-brand-500 focus:border-brand-500 outline-none transition" placeholder="Enter new password">
+                        </div>
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Confirm New Password</label>
+                            <input type="password" id="acc-conf-pass" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg p-2.5 focus:ring-brand-500 focus:border-brand-500 outline-none transition" placeholder="Re-enter new password">
+                        </div>
+                        <button id="btn-update-pass" onclick="updatePassword()" class="bg-brand-600 hover:bg-brand-700 text-white font-medium py-2.5 px-6 rounded-lg transition w-full sm:w-auto shadow-sm"><i class="fa-solid fa-key mr-2"></i> Update Password</button>
+                    </div>
+                </div>
+
+                <!-- VIEW 2: ENGINEER MANAGEMENT -->
+                <div id="settings-engineer-view" class="hidden grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden h-fit">
+                        <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                            <h3 class="text-base font-semibold text-slate-800">Engineer List</h3>
+                            <span class="bg-blue-100 text-blue-700 text-xs font-bold px-2.5 py-0.5 rounded-full border border-blue-200">Total: <span id="total-engineers">0</span></span>
+                        </div>
+                        <div class="overflow-y-auto max-h-96">
+                            <table class="w-full text-sm text-left">
+                                <thead class="text-xs text-slate-500 uppercase bg-slate-50 sticky top-0 z-10">
+                                    <tr>
+                                        <th class="px-6 py-3 font-medium">Engineer Name</th>
+                                        <th class="px-6 py-3 font-medium">Position</th>
+                                        <th class="px-6 py-3 font-medium text-right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="settings-engineer-body" class="divide-y divide-slate-100">
+                                    <tr><td colspan="3" class="px-6 py-4 text-center text-slate-500">Loading data...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="add-engineer-block" class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden h-fit">
+                        <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                            <h3 class="text-base font-semibold text-slate-800">Add New Engineer</h3>
+                        </div>
+                        <div class="p-6">
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
+                                <input type="text" id="new-engineer-name" placeholder="e.g., John Doe" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 p-2.5">
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Position</label>
+                                <select id="new-engineer-pos" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 p-2.5">
+                                    <option value="">-- Select Position --</option>
+                                    <option value="Service Engineer">Service Engineer</option>
+                                    <option value="Junior Service Engineer">Junior Service Engineer</option>
+                                    <option value="Senior Service Engineer">Senior Service Engineer</option>
+                                    <option value="Assistant Service Manager">Assistant Service Manager</option>
+                                    <option value="Service Manager">Service Manager</option>
+                                    <option value="Service Partner">Service Partner (Subcon)</option>
+                                </select>
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Temporary Password <span class="text-xs text-red-500">*</span></label>
+                                <input type="text" id="new-engineer-pass" placeholder="e.g., Sungrow123" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 p-2.5">
+                            </div>
+                            <button id="btn-add-eng" onclick="submitNewEngineer()" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium py-2.5 rounded-lg transition shadow-sm">Add Engineer</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW 3: PROJECT MANAGEMENT -->
+                <div id="settings-project-view" class="hidden flex-col gap-6">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+                        <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                            <h3 class="text-base font-semibold text-slate-800">Add New Project / Equipment Record</h3>
+                        </div>
+                        <div class="p-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 items-start">
+                            
+                            <!-- Region (Dropdown / Custom) -->
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 mb-1">Region</label>
+                                <div id="region-select-wrapper">
+                                    <select id="new-proj-region-select" onchange="handleRegionSelection()" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 p-2.5 cursor-pointer">
+                                        <option value="">-- Select Region --</option>
+                                    </select>
+                                </div>
+                                <div id="region-input-wrapper" class="hidden relative">
+                                    <input type="text" id="new-proj-region-input" placeholder="Type new region..." class="w-full bg-blue-50 border border-brand-300 text-brand-900 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 p-2.5 pr-10">
+                                    <button type="button" onclick="cancelCustomInput('region')" class="absolute right-2 top-2 text-slate-400 hover:text-red-500 p-1 rounded transition" title="Cancel New Entry"><i class="fa-solid fa-xmark"></i></button>
+                                </div>
+                            </div>
+
+                            <!-- Project Name (Dropdown / Custom) -->
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 mb-1">Project Name</label>
+                                <div id="project-select-wrapper">
+                                    <select id="new-proj-name-select" onchange="handleProjectSelection()" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 p-2.5 cursor-pointer disabled:opacity-50" disabled>
+                                        <option value="">-- Select Region First --</option>
+                                    </select>
+                                </div>
+                                <div id="project-input-wrapper" class="hidden relative">
+                                    <input type="text" id="new-proj-name-input" placeholder="Type new project..." class="w-full bg-blue-50 border border-brand-300 text-brand-900 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 p-2.5 pr-10">
+                                    <button type="button" onclick="cancelCustomInput('project')" class="absolute right-2 top-2 text-slate-400 hover:text-red-500 p-1 rounded transition" title="Cancel New Entry"><i class="fa-solid fa-xmark"></i></button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 mb-1">Product Model</label>
+                                <input type="text" id="new-proj-model" placeholder="e.g., SG350HX" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 p-2.5">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 mb-1">Product Code/Serial</label>
+                                <input type="text" id="new-proj-serial" placeholder="e.g., ASG01758" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 p-2.5">
+                            </div>
+                            <div class="md:col-span-2 xl:col-span-4 flex justify-end mt-2">
+                                <button id="btn-add-project" onclick="submitNewProject()" class="w-full sm:w-auto bg-brand-600 hover:bg-brand-700 text-white font-medium py-2.5 px-8 rounded-lg transition shadow-sm"><i class="fa-solid fa-plus mr-2"></i> Add Record to Database</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+                        <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <div>
+                                <h3 class="text-base font-semibold text-slate-800">Project & Equipment Directory</h3>
+                                <div class="text-xs text-slate-500 mt-1">Total Record: <span id="total-projects" class="font-bold text-slate-800">0</span> items</div>
+                            </div>
+                            <div class="relative w-full sm:w-72">
+                                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none"><i class="fa-solid fa-search text-slate-400"></i></div>
+                                <input type="text" id="search-project" class="bg-white border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block w-full pl-10 p-2" placeholder="Search any detail..." onkeyup="filterProjects()">
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto min-h-[300px]">
+                            <table class="w-full text-sm text-left">
+                                <thead class="text-xs text-slate-500 uppercase bg-slate-100 sticky top-0 z-10 shadow-sm">
+                                    <tr>
+                                        <th class="px-6 py-3 font-medium whitespace-nowrap">No</th>
+                                        <th class="px-6 py-3 font-medium whitespace-nowrap">Project Name</th>
+                                        <th class="px-6 py-3 font-medium whitespace-nowrap">Region</th>
+                                        <th class="px-6 py-3 font-medium whitespace-nowrap">Product Model</th>
+                                        <th class="px-6 py-3 font-medium whitespace-nowrap">Serial Number</th>
+                                        <th class="px-6 py-3 font-medium text-right whitespace-nowrap">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="settings-project-body" class="divide-y divide-slate-100">
+                                    <tr><td colspan="6" class="px-6 py-8 text-center text-slate-500">Loading data...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="px-6 py-3 border-t border-slate-100 bg-slate-50 flex justify-between items-center" id="project-pagination"></div>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="mt-8 pt-4 pb-2 text-center md:hidden"><p class="text-xs text-slate-400">&copy; 2026 All Right Reserved by Sungrow</p></footer>
+        </div>
+    </main>
+
+    <script>
+        const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTedYI72qkffFMoxGW4z-5FV_UfqXg--f6ql5bnGbkB3kiNes5b3nqUm8umfjJ1wb5mRGyRkLeMh4ua/pub?output=csv'; 
+        const ENGINEER_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTedYI72qkffFMoxGW4z-5FV_UfqXg--f6ql5bnGbkB3kiNes5b3nqUm8umfjJ1wb5mRGyRkLeMh4ua/pub?gid=33758384&single=true&output=csv';
+        const PROJECT_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTedYI72qkffFMoxGW4z-5FV_UfqXg--f6ql5bnGbkB3kiNes5b3nqUm8umfjJ1wb5mRGyRkLeMh4ua/pub?gid=27746818&single=true&output=csv';
+        const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbypIUdID03zvyxmxUzFc5Avj4jHXoflLNBTRk2HgCYJfhNVyfqEA_Z-45QWyAjdvSvX/exec'; 
+
+        let globalData = [];
+        let dateFilteredData = [];
+        let engineerData = [];
+        let projectData = [];
+        let charts = {};
+        
+        let publicHolidays = [];
+        let fetchedHolidayYears = [];
+        let generatedClaimRows = []; 
+        
+        let pendingDeleteAction = null; 
+
+        // --- SESSION VARIABLES ---
+        let loggedInUser = null;
+        let isManager = false;
+        const SESSION_TTL_HOURS = 12; // must match SESSION_TTL_HOURS in Code.gs
+
+        // SECURITY: escape dynamic text before inserting via innerHTML, to stop stored-XSS from
+        // data that ultimately comes from other people (client feedback, job descriptions, etc).
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+        // SECURITY: for values placed inside onclick="fn('${...}')" — a plain escapeHtml() is not
+        // enough there, because the browser HTML-decodes the attribute BEFORE handing it to the JS
+        // parser, so an escaped "&#39;" would turn back into a raw ' and break out of the inline
+        // JS string. Backslash-escape first, then HTML-escape, so it survives both layers safely.
+        function escJsAttr(str) {
+            if (str === null || str === undefined) return '';
+            return escapeHtml(String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
+        }
+
+        setInterval(() => {
+            const now = new Date();
+            const timeEl = document.getElementById('current-time');
+            if(timeEl) timeEl.innerText = now.toLocaleString('en-MY', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' });
+        }, 1000);
+
+        function showMessageModal(message, title = "Notification") {
+            document.getElementById('genericMessageModalTitle').innerText = title;
+            document.getElementById('genericMessageModalText').innerHTML = message;
+            document.getElementById('genericModalLinkArea').innerHTML = ''; 
+            document.getElementById('genericMessageModal').style.display = 'flex';
+        }
+
+        function showSuccessClaimModal(message, folderLink) {
+            document.getElementById('genericMessageModalTitle').innerText = "Claims Saved Successfully!";
+            document.getElementById('genericMessageModalText').innerHTML = message;
+            document.getElementById('genericModalLinkArea').innerHTML = `
+                <a href="${folderLink}" target="_blank" class="inline-flex items-center justify-center w-full bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 px-4 py-2.5 rounded-lg text-sm font-bold transition">
+                    <i class="fa-solid fa-folder-open mr-2"></i> Open Claims Folder (Drive)
+                </a>
+            `;
+            document.getElementById('genericMessageModal').style.display = 'flex';
+        }
+        
+        function closeGenericMessageModal() {
+            document.getElementById('genericMessageModal').style.display = 'none';
+        }
+
+        function logout() {
+            showTechLoader("TERMINATING SECURE SESSION...");
+            // SECURITY: tell the server to invalidate this session token too (fire-and-forget) -
+            // otherwise a copied/stolen token would keep working after the user logs out.
+            if (loggedInUser && loggedInUser.sessionToken) {
+                fetch(APP_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'logout', sessionToken: loggedInUser.sessionToken }) }).catch(() => {});
+            }
+            localStorage.removeItem('sungrowUser');
+            setTimeout(() => {
+                window.location.href = 'https://sungrowutilityservice-ai.github.io/fieldreportform/';
+            }, 1200);
+        }
+
+        // ==========================================
+        // LOADING OVERLAY FUNCTIONS
+        // ==========================================
+        function showTechLoader(message) {
+            const overlay = document.getElementById('loading-overlay');
+            const subtitle = document.getElementById('loading-subtitle');
+            if (subtitle && message) subtitle.innerText = message;
+            if (overlay) overlay.style.display = 'flex';
+        }
+
+        function hideTechLoader() {
+            const overlay = document.getElementById('loading-overlay');
+            const subtitle = document.getElementById('loading-subtitle');
+            if (overlay) overlay.style.display = 'none';
+            if (subtitle) subtitle.innerText = 'Syncing securely with database...';
+        }
+
+        // ==========================================
+        // MODAL EDIT & DELETE FUNCTIONS
+        // ==========================================
+        function promptDeleteEngineer(name) {
+            document.getElementById('confirmDeleteText').innerHTML = `Are you sure you want to delete engineer <b>${name}</b>?<br>This action cannot be undone.`;
+            pendingDeleteAction = { type: 'engineer', name: name };
+            document.getElementById('confirmDeleteModal').style.display = 'flex';
+        }
+
+        function promptDeleteEquipment(index) {
+            const item = filteredProjectData[index];
+            const pName = item['Project Name'] || '';
+            const mod = item['Product Model'] || '';
+            const ser = item['Product Code/Serial'] || '';
+            
+            document.getElementById('confirmDeleteText').innerHTML = `Are you sure you want to delete equipment <b>${mod} (${ser})</b> from project <b>${pName}</b>?<br>This action cannot be undone.`;
+            pendingDeleteAction = { type: 'equipment', project: pName, model: mod, serial: ser };
+            document.getElementById('confirmDeleteModal').style.display = 'flex';
+        }
+
+        function closeConfirmDelete() {
+            document.getElementById('confirmDeleteModal').style.display = 'none';
+            pendingDeleteAction = null;
+        }
+
+        async function executeDelete() {
+            if(!pendingDeleteAction) return;
+            const btn = document.getElementById('btn-confirm-delete');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'Deleting...'; btn.disabled = true;
+
+            let actionKey = '';
+            let reqBody = {};
+
+            if (pendingDeleteAction.type === 'engineer') {
+                actionKey = 'delete_engineer';
+                reqBody = { action: actionKey, sessionToken: loggedInUser.sessionToken, name: pendingDeleteAction.name };
+            } else if (pendingDeleteAction.type === 'equipment') {
+                actionKey = 'delete_project_equipment';
+                reqBody = { action: actionKey, sessionToken: loggedInUser.sessionToken, projectName: pendingDeleteAction.project, model: pendingDeleteAction.model, serial: pendingDeleteAction.serial };
+            }
+
+            try {
+                const res = await fetch(APP_SCRIPT_URL, { method: 'POST', body: JSON.stringify(reqBody) });
+                let data;
+                try { data = await res.json(); } catch(e) { throw new Error("Invalid server response."); }
+
+                closeConfirmDelete();
+                if(data.status === 'success') {
+                    showMessageModal(data.message, "Deleted Successfully");
+                    fetchReferences();
+                } else {
+                    showMessageModal("Error: " + data.message, "Failed");
+                }
+            } catch (e) {
+                closeConfirmDelete();
+                showMessageModal("Server error: " + e.message, "Failed");
+            }
+            btn.innerHTML = originalText; btn.disabled = false;
+        }
+
+        function promptEditEngineer(name, position) {
+            document.getElementById('edit-eng-oldname').value = name;
+            document.getElementById('edit-eng-newname').value = name;
+            
+            const posInput = document.getElementById('edit-eng-newpos');
+            
+            // Allow legacy positions to be selected if they don't exist in the new dropdown
+            let optionExists = Array.from(posInput.options).some(opt => opt.value === position);
+            if (!optionExists && position) {
+                const newOpt = document.createElement('option');
+                newOpt.value = position;
+                newOpt.innerText = position + ' (Legacy Data)';
+                posInput.appendChild(newOpt);
+            }
+            
+            posInput.value = position || '';
+            
+            // Lock jawatan jika bukan Manager
+            if (!isManager) {
+                posInput.disabled = true;
+                posInput.classList.add('bg-slate-200', 'cursor-not-allowed', 'text-slate-500');
+            } else {
+                posInput.disabled = false;
+                posInput.classList.remove('bg-slate-200', 'cursor-not-allowed', 'text-slate-500');
+            }
+            
+            document.getElementById('editEngineerModal').style.display = 'flex';
+        }
+
+        function promptEditEquipment(index) {
+            const item = filteredProjectData[index];
+            document.getElementById('edit-eq-oldproject').value = item['Project Name'] || '';
+            document.getElementById('edit-eq-oldmodel').value = item['Product Model'] || '';
+            document.getElementById('edit-eq-oldserial').value = item['Product Code/Serial'] || '';
+
+            document.getElementById('edit-eq-region').value = item['Region'] || '';
+            document.getElementById('edit-eq-project').value = item['Project Name'] || '';
+            document.getElementById('edit-eq-model').value = item['Product Model'] || '';
+            document.getElementById('edit-eq-serial').value = item['Product Code/Serial'] || '';
+
+            document.getElementById('editEquipmentRecordModal').style.display = 'flex';
+        }
+
+        function closeEditModals() {
+            document.getElementById('editEngineerModal').style.display = 'none';
+            document.getElementById('editEquipmentRecordModal').style.display = 'none';
+        }
+
+        async function executeEditEngineer() {
+            const oldName = document.getElementById('edit-eng-oldname').value;
+            const newName = document.getElementById('edit-eng-newname').value.trim();
+            const newPos = document.getElementById('edit-eng-newpos').value.trim();
+            if(!newName) return showMessageModal("Name cannot be left blank.");
+
+            const btn = document.getElementById('btn-save-eng');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'Saving...'; btn.disabled = true;
+
+            try {
+                const res = await fetch(APP_SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'edit_engineer', sessionToken: loggedInUser.sessionToken, oldName: oldName, newName: newName, newPosition: newPos })
+                });
+                let data;
+                try { data = await res.json(); } catch(e) { throw new Error("Invalid server response."); }
+
+                closeEditModals();
+                if(data.status === 'success') {
+                    showMessageModal(data.message, "Success");
+                    
+                    if (oldName === loggedInUser.name) {
+                        loggedInUser.name = newName;
+                        localStorage.setItem('sungrowUser', JSON.stringify(loggedInUser));
+                        document.getElementById('sidebar-user-name').innerText = newName;
+                        document.getElementById('sidebar-user-initial').innerText = newName.substring(0, 2).toUpperCase();
+                    }
+
+                    fetchReferences();
+                } else {
+                    showMessageModal("Error: " + data.message, "Failed");
+                }
+            } catch (e) {
+                closeEditModals();
+                showMessageModal("Server error: " + e.message, "Failed");
+            }
+            btn.innerHTML = originalText; btn.disabled = false;
+        }
+
+        async function executeEditSpecificEquipment() {
+            const oldProject = document.getElementById('edit-eq-oldproject').value;
+            const oldModel = document.getElementById('edit-eq-oldmodel').value;
+            const oldSerial = document.getElementById('edit-eq-oldserial').value;
+
+            const newRegion = document.getElementById('edit-eq-region').value.trim();
+            const newProject = document.getElementById('edit-eq-project').value.trim();
+            const newModel = document.getElementById('edit-eq-model').value.trim();
+            const newSerial = document.getElementById('edit-eq-serial').value.trim();
+
+            if(!newProject || !newModel) return showMessageModal("Project Name and Product Model are required.");
+
+            const btn = document.getElementById('btn-save-edit-eq');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'Saving...'; btn.disabled = true;
+
+            try {
+                const res = await fetch(APP_SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'edit_project_equipment',
+                        sessionToken: loggedInUser.sessionToken,
+                        oldProjectName: oldProject, oldModel: oldModel, oldSerial: oldSerial,
+                        newRegion: newRegion, newProjectName: newProject, newModel: newModel, newSerial: newSerial
+                    })
+                });
+                let data;
+                try { data = await res.json(); } catch(e) { throw new Error("Invalid server response."); }
+
+                closeEditModals();
+                if(data.status === 'success') {
+                    showMessageModal(data.message, "Success");
+                    fetchReferences();
+                } else {
+                    showMessageModal("Error: " + data.message, "Failed");
+                }
+            } catch (e) {
+                closeEditModals();
+                showMessageModal("Server error: " + e.message, "Failed");
+            }
+            btn.innerHTML = originalText; btn.disabled = false;
+        }
+
+        // ==========================================
+        // UTILITY FUNCTIONS
+        // ==========================================
+        function getJobStatusBadge(status) {
+            const s = status ? status.toLowerCase() : '';
+            if (s.includes('completed')) return `<span class="px-2.5 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">${escapeHtml(status)}</span>`;
+            if (s.includes('progress')) return `<span class="px-2.5 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700 border border-blue-200">${escapeHtml(status)}</span>`;
+            if (s.includes('pending')) return `<span class="px-2.5 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-700 border border-amber-200">${escapeHtml(status)}</span>`;
+            return `<span class="px-2.5 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-200">${escapeHtml(status) || 'N/A'}</span>`;
+        }
+        function getApprovalStatusBadge(status) {
+            const s = status ? status.toLowerCase() : '';
+            if (s === 'approved') return `<span class="px-2.5 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">Approved</span>`;
+            if (s === 'pending') return `<span class="px-2.5 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-700 border border-amber-200">Pending</span>`;
+            return `<span class="px-2.5 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-200">Draft</span>`;
+        }
+        function ticketNoOf(row) { return escapeHtml(row.APACTicketNo || row.GSPTicketNo || '-'); }
+        function starDisplayHtml(rating) {
+            const r = parseFloat(rating);
+            if (!r || isNaN(r)) return '<span class="text-slate-400 text-xs">Not rated yet</span>';
+            let html = '<span class="star-display">';
+            for (let i = 1; i <= 5; i++) html += i <= r ? '★' : '<span class="empty">★</span>';
+            html += `</span> <span class="text-xs text-slate-500">(${r}/5)</span>`;
+            return html;
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const backdrop = document.getElementById('sidebar-backdrop');
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full'); backdrop.classList.remove('hidden'); backdrop.classList.add('block');
+            } else {
+                sidebar.classList.add('-translate-x-full'); backdrop.classList.add('hidden'); backdrop.classList.remove('block');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- SESSION CONTROL & RBAC ---
+            const sessionStr = localStorage.getItem('sungrowUser');
+            if (!sessionStr) {
+                window.location.href = 'https://sungrowutilityservice-ai.github.io/fieldreportform/';
+                return;
+            }
+            loggedInUser = JSON.parse(sessionStr);
+
+            // SECURITY: session now expires client-side after SESSION_TTL_HOURS too (matches the
+            // server-side expiry in Code.gs) - a lost/shared device doesn't stay logged in forever.
+            const hoursSinceLogin = loggedInUser.loginTime ? (Date.now() - loggedInUser.loginTime) / 3600000 : 999;
+            if (!loggedInUser.sessionToken || hoursSinceLogin >= SESSION_TTL_HOURS) {
+                localStorage.removeItem('sungrowUser');
+                window.location.href = 'https://sungrowutilityservice-ai.github.io/fieldreportform/';
+                return;
+            }
+
+            const roleStr = (loggedInUser.role || '').toLowerCase();
+            if (roleStr.includes('partner')) {
+                window.location.href = 'https://sungrowutilityservice-ai.github.io/fieldreportform/';
+                return;
+            }
+            isManager = roleStr.includes('manager');
+
+            document.getElementById('sidebar-user-initial').innerText = loggedInUser.name.substring(0, 2).toUpperCase();
+            document.getElementById('sidebar-user-name').innerText = loggedInUser.name;
+            document.getElementById('sidebar-user-role').innerText = loggedInUser.role || 'Engineer';
+
+            // Filter Tabs on Settings
+            if (!isManager) {
+                document.getElementById('btn-set-proj').style.display = 'none';
+                document.getElementById('btn-set-eng').style.display = 'none';
+                switchSettingsTab('account'); // Default for Engineer
+            } else {
+                switchSettingsTab('engineer'); // Default for Manager
+            }
+
+            Chart.defaults.font.family = 'Inter, sans-serif';
+            Chart.defaults.color = '#64748b';
+            fetchData();
+            fetchReferences();
+        });
+
+        function switchTab(tabId) {
+            const titles = { overview: 'Overview Dashboard', monitoring: 'Job Monitoring', issues: 'Pending Jobs & Issues', performance: 'Engineer & Plant Performance', documents: 'Document & Approval', allowance: 'Allowance & Claims', settings: 'System Settings' };
+            document.getElementById('page-title').innerText = titles[tabId];
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            
+            const globalFilter = document.getElementById('header-date-filter');
+            if(tabId === 'allowance' || tabId === 'settings') {
+                globalFilter.style.display = 'none'; 
+            } else {
+                globalFilter.style.display = 'flex';
+            }
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.className = btn.dataset.target === tabId
+                    ? "nav-btn w-full flex items-center space-x-3 px-4 py-3 text-sm font-medium rounded-lg bg-brand-600 text-white transition-colors shadow-md"
+                    : "nav-btn w-full flex items-center space-x-3 px-4 py-3 text-sm font-medium rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors";
+            });
+            if (tabId === 'performance') { 
+                if (charts.staff) charts.staff.update(); 
+                if (charts.client) charts.client.update(); 
+                if (charts.equipment) charts.equipment.update();
+                if (charts.sparePart) charts.sparePart.update();
+            }
+            if (window.innerWidth < 768) {
+                const sidebar = document.getElementById('sidebar');
+                if (!sidebar.classList.contains('-translate-x-full')) toggleSidebar();
+            }
+        }
+
+        function fetchData() {
+            document.getElementById('loading-overlay').style.display = 'flex';
+            // SECURITY: was Papa.parse(SHEET_CSV_URL) hitting a public "Publish to Web" CSV with
+            // every customer's name/phone/email + every approval token, no login required.
+            // Replaced with an authenticated call - server now also pre-filters by engineer for
+            // non-managers, same rule kept below too so behaviour stays identical either way.
+            fetch(APP_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'get_reports', sessionToken: loggedInUser.sessionToken }) })
+                .then(res => res.json())
+                .then(resp => {
+                    if (resp.status !== 'success') throw new Error(resp.message || 'Failed to load data.');
+                    globalData = resp.data;
+
+                    if (!isManager) {
+                        globalData = globalData.filter(row => {
+                            const engList = (row.ServiceEngineer || '').toLowerCase();
+                            const myName = loggedInUser.name.toLowerCase().split('(')[0].trim();
+                            return engList.includes(myName);
+                        });
+                    }
+
+                    globalData.sort((a, b) => new Date(b.Timestamp || b.ReportDate) - new Date(a.Timestamp || a.ReportDate));
+                    applyGlobalFilters();
+                    document.getElementById('loading-overlay').style.display = 'none';
+                })
+                .catch(() => {
+                    showMessageModal("Failed to load data. Please check connection or login session.", "Data Load Error");
+                    document.getElementById('loading-overlay').style.display = 'none';
+                });
+        }
+
+        // ==========================================
+        // FETCH REFERENCES & CHANGE PASSWORD (SETTINGS TAB)
+        // ==========================================
+        function switchSettingsTab(view) {
+            const accView = document.getElementById('settings-account-view');
+            const engView = document.getElementById('settings-engineer-view');
+            const projView = document.getElementById('settings-project-view');
+            
+            const btnAcc = document.getElementById('btn-set-acc');
+            const btnEng = document.getElementById('btn-set-eng');
+            const btnProj = document.getElementById('btn-set-proj');
+
+            const activeClass = "px-4 py-2 text-sm font-medium rounded-lg bg-brand-600 text-white transition-colors shrink-0";
+            const inactiveClass = "px-4 py-2 text-sm font-medium rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors shrink-0";
+
+            if(btnAcc) btnAcc.className = inactiveClass;
+            if(btnEng) btnEng.className = inactiveClass;
+            if(btnProj) btnProj.className = inactiveClass;
+
+            accView.classList.add('hidden');
+            engView.classList.add('hidden');
+            projView.classList.add('hidden');
+            accView.classList.remove('grid');
+            engView.classList.remove('grid');
+            projView.classList.remove('flex');
+
+            if (view === 'account') {
+                accView.classList.remove('hidden');
+                accView.classList.add('grid');
+                if(btnAcc) btnAcc.className = activeClass;
+            } else if (view === 'engineer') {
+                engView.classList.remove('hidden');
+                engView.classList.add('grid');
+                if(btnEng) btnEng.className = activeClass;
+            } else if (view === 'project') {
+                projView.classList.remove('hidden');
+                projView.classList.add('flex');
+                if(btnProj) btnProj.className = activeClass;
+            }
+        }
+
+        async function updatePassword() {
+            const oldPass = document.getElementById('acc-old-pass').value.trim();
+            const newPass = document.getElementById('acc-new-pass').value.trim();
+            const confPass = document.getElementById('acc-conf-pass').value.trim();
+
+            // SECURITY: current password is now required to change your own password -
+            // otherwise anyone with a few seconds on an unlocked/shared session could silently
+            // lock the real user out by setting a new password without knowing the old one.
+            if (!oldPass) return showMessageModal("Please enter your current password.", "Error");
+            if (!newPass || !confPass) return showMessageModal("Please fill in all password fields.", "Error");
+            if (newPass !== confPass) return showMessageModal("Passwords do not match! Please check again.", "Error");
+
+            const btn = document.getElementById('btn-update-pass');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Updating...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch(APP_SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'change_password', sessionToken: loggedInUser.sessionToken, username: loggedInUser.name, oldPassword: oldPass, newPassword: newPass })
+                });
+                let data;
+                try { data = await res.json(); } catch(e) { throw new Error("Invalid server response."); }
+
+                if (data.status === 'success') {
+                    showMessageModal("Your password has been updated successfully!", "Success");
+                    document.getElementById('acc-old-pass').value = '';
+                    document.getElementById('acc-new-pass').value = '';
+                    document.getElementById('acc-conf-pass').value = '';
+                } else {
+                    showMessageModal("Error: " + data.message, "Failed");
+                }
+            } catch (err) {
+                showMessageModal("Server error: " + err.message, "Network Error");
+            }
+            btn.innerHTML = originalText; btn.disabled = false;
+        }
+
+        let projectSearchTerm = '';
+        let projectCurrentPage = 1;
+        const projectItemsPerPage = 20;
+        let filteredProjectData = [];
+        let regionProjectMap = {}; 
+
+        function fetchReferences() {
+            // SECURITY: was Papa.parse(ENGINEER_CSV_URL) / Papa.parse(PROJECT_CSV_URL) hitting
+            // public "Publish to Web" CSVs - the engineer one sat in the exact same sheet tab as
+            // the plaintext password column. Replaced with authenticated calls; the engineer
+            // endpoint server-side never returns the password column at all.
+            fetch(APP_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'get_engineers', sessionToken: loggedInUser.sessionToken }) })
+                .then(res => res.json())
+                .then(resp => {
+                    if (resp.status !== 'success') { console.error(resp.message); return; }
+                    engineerData = resp.data;
+                    renderSettingsEngineers();
+                })
+                .catch(err => console.error("Failed to fetch engineer references:", err));
+
+            fetch(APP_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'get_projects', sessionToken: loggedInUser.sessionToken }) })
+                .then(res => res.json())
+                .then(resp => {
+                    if (resp.status !== 'success') { console.error(resp.message); return; }
+                    projectData = resp.data;
+                    extractRegionProjectMap();
+                    filterProjects();
+                })
+                .catch(err => console.error("Failed to fetch project references:", err));
+        }
+
+        // ==========================================
+        // DYNAMIC DROPDOWN LOGIC (REGION -> PROJECT)
+        // ==========================================
+        function extractRegionProjectMap() {
+            regionProjectMap = {};
+            projectData.forEach(row => {
+                const keys = Object.keys(row);
+                const rKey = keys.find(k => k.toLowerCase().includes('region')) || 'Region';
+                const pKey = keys.find(k => k.toLowerCase().includes('project name')) || 'Project Name';
+                
+                const reg = (row[rKey] || '').trim();
+                const proj = (row[pKey] || '').trim();
+                
+                if (reg) {
+                    if (!regionProjectMap[reg]) regionProjectMap[reg] = new Set();
+                    if (proj) regionProjectMap[reg].add(proj);
+                }
+            });
+            populateRegionDropdown();
+        }
+
+        function populateRegionDropdown() {
+            const select = document.getElementById('new-proj-region-select');
+            select.innerHTML = '<option value="">-- Select Region --</option>';
+            Object.keys(regionProjectMap).sort().forEach(reg => {
+                select.innerHTML += `<option value="${reg}">${reg}</option>`;
+            });
+            select.innerHTML += '<option value="__ADD_NEW__" class="font-bold text-brand-600">➕ Add New Region...</option>';
+        }
+
+        function populateProjectDropdown(region) {
+            const select = document.getElementById('new-proj-name-select');
+            select.innerHTML = '<option value="">-- Select Project Name --</option>';
+            
+            if (region && regionProjectMap[region]) {
+                select.disabled = false;
+                Array.from(regionProjectMap[region]).sort().forEach(proj => {
+                    select.innerHTML += `<option value="${proj}">${proj}</option>`;
+                });
+                select.innerHTML += '<option value="__ADD_NEW__" class="font-bold text-brand-600">➕ Add New Project...</option>';
+            } else {
+                select.disabled = true;
+                if(!region) select.innerHTML = '<option value="">-- Select Region First --</option>';
+                else {
+                    select.disabled = false;
+                    select.innerHTML = '<option value="__ADD_NEW__" class="font-bold text-brand-600">➕ Add New Project...</option>';
+                    select.value = '__ADD_NEW__';
+                    handleProjectSelection(); 
+                }
+            }
+        }
+
+        function handleRegionSelection() {
+            const val = document.getElementById('new-proj-region-select').value;
+            if (val === '__ADD_NEW__') {
+                document.getElementById('region-select-wrapper').classList.add('hidden');
+                document.getElementById('region-input-wrapper').classList.remove('hidden');
+                document.getElementById('new-proj-region-input').focus();
+                populateProjectDropdown('__NEW_CUSTOM_REGION__');
+            } else {
+                populateProjectDropdown(val);
+                document.getElementById('project-input-wrapper').classList.add('hidden');
+                document.getElementById('project-select-wrapper').classList.remove('hidden');
+            }
+        }
+
+        function handleProjectSelection() {
+            const val = document.getElementById('new-proj-name-select').value;
+            if (val === '__ADD_NEW__') {
+                document.getElementById('project-select-wrapper').classList.add('hidden');
+                document.getElementById('project-input-wrapper').classList.remove('hidden');
+                document.getElementById('new-proj-name-input').focus();
+            }
+        }
+
+        function cancelCustomInput(type) {
+            if (type === 'region') {
+                document.getElementById('region-input-wrapper').classList.add('hidden');
+                document.getElementById('region-select-wrapper').classList.remove('hidden');
+                document.getElementById('new-proj-region-select').value = '';
+                document.getElementById('new-proj-region-input').value = '';
+                populateProjectDropdown('');
+                
+                document.getElementById('project-input-wrapper').classList.add('hidden');
+                document.getElementById('project-select-wrapper').classList.remove('hidden');
+                document.getElementById('new-proj-name-input').value = '';
+            } else {
+                document.getElementById('project-input-wrapper').classList.add('hidden');
+                document.getElementById('project-select-wrapper').classList.remove('hidden');
+                document.getElementById('new-proj-name-select').value = '';
+                document.getElementById('new-proj-name-input').value = '';
+                
+                const currentReg = document.getElementById('new-proj-region-select').value;
+                if(currentReg === '__ADD_NEW__') {
+                    cancelCustomInput('region');
+                }
+            }
+        }
+
+        function renderSettingsEngineers() {
+            const tbody = document.getElementById('settings-engineer-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            let count = 0;
+            
+            let renderData = engineerData;
+            if (!isManager) {
+                renderData = engineerData.filter(r => r.Engineer === loggedInUser.name);
+            }
+
+            renderData.forEach(row => {
+                if(row.Engineer && row.Engineer.trim() !== '') {
+                    count++;
+                    const deleteBtnHtml = isManager ? `<button onclick="promptDeleteEngineer('${escJsAttr(row.Engineer)}')" class="text-red-400 hover:text-red-600 mx-2 transition" title="Delete"><i class="fa-solid fa-trash"></i></button>` : '';
+
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-slate-50 transition border-b border-slate-50">
+                            <td class="px-6 py-3 font-medium text-slate-800 whitespace-nowrap">${escapeHtml(row.Engineer)}</td>
+                            <td class="px-6 py-3 text-slate-600">${escapeHtml(row.Position) || '-'}</td>
+                            <td class="px-6 py-3 text-right whitespace-nowrap">
+                                <button onclick="promptEditEngineer('${escJsAttr(row.Engineer)}', '${escJsAttr(row.Position || '')}')" class="text-blue-500 hover:text-blue-700 mx-2 transition" title="Update"><i class="fa-solid fa-pen"></i></button>
+                                ${deleteBtnHtml}
+                            </td>
+                        </tr>
+                    `;
+                }
+            });
+            
+            if (count === 0) tbody.innerHTML = `<tr><td colspan="3" class="px-6 py-4 text-center text-slate-500">No engineer records found.</td></tr>`;
+            document.getElementById('total-engineers').innerText = count;
+        }
+
+        function filterProjects() {
+            const searchInput = document.getElementById('search-project');
+            projectSearchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+            projectCurrentPage = 1;
+            renderSettingsProjects();
+        }
+
+        function changeProjectPage(page) {
+            projectCurrentPage = page;
+            renderSettingsProjects();
+        }
+        
+        function renderProjectPagination(totalPages) {
+            const paginationContainer = document.getElementById('project-pagination');
+            if (!paginationContainer) return;
+
+            if (totalPages <= 1) {
+                paginationContainer.innerHTML = '';
+                return;
+            }
+            
+            let buttonsHtml = '';
+            const maxButtons = 5;
+            let startBtn = Math.max(1, projectCurrentPage - 2);
+            let endBtn = Math.min(totalPages, startBtn + maxButtons - 1);
+            if (endBtn - startBtn < maxButtons - 1) {
+                startBtn = Math.max(1, endBtn - maxButtons + 1);
+            }
+
+            if (startBtn > 1) buttonsHtml += `<button onclick="changeProjectPage(1)" class="px-2 py-1 bg-white border border-slate-300 text-slate-600 hover:bg-slate-50 rounded text-xs mx-0.5">1</button><span class="mx-1 text-slate-400">...</span>`;
+
+            for (let i = startBtn; i <= endBtn; i++) {
+                if (i === projectCurrentPage) {
+                    buttonsHtml += `<button class="px-3 py-1 bg-brand-600 border border-brand-600 text-white rounded text-xs font-bold mx-0.5 shadow-sm">${i}</button>`;
+                } else {
+                    buttonsHtml += `<button onclick="changeProjectPage(${i})" class="px-3 py-1 bg-white border border-slate-300 text-slate-600 hover:bg-slate-50 rounded text-xs mx-0.5 transition">${i}</button>`;
+                }
+            }
+
+            if (endBtn < totalPages) buttonsHtml += `<span class="mx-1 text-slate-400">...</span><button onclick="changeProjectPage(${totalPages})" class="px-2 py-1 bg-white border border-slate-300 text-slate-600 hover:bg-slate-50 rounded text-xs mx-0.5">${totalPages}</button>`;
+            
+            paginationContainer.innerHTML = `
+                <div class="text-xs text-slate-500 font-medium">Page <span class="text-slate-800">${projectCurrentPage}</span> of ${totalPages}</div>
+                <div class="flex items-center">${buttonsHtml}</div>
+            `;
+        }
+
+        function renderSettingsProjects() {
+            const tbody = document.getElementById('settings-project-body');
+            if (!tbody) return;
+
+            filteredProjectData = projectData.filter(row => {
+                const keys = Object.keys(row);
+                const pKey = keys.find(k => k.toLowerCase().includes('project name')) || 'Project Name';
+                const rKey = keys.find(k => k.toLowerCase().includes('region')) || 'Region';
+                const mKey = keys.find(k => k.toLowerCase().includes('product model')) || 'Product Model';
+                const sKey = keys.find(k => k.toLowerCase().includes('serial') || k.toLowerCase().includes('product code')) || 'Product Code/Serial';
+                
+                row['Project Name'] = row[pKey] || '';
+                row['Region'] = row[rKey] || '';
+                row['Product Model'] = row[mKey] || '';
+                row['Product Code/Serial'] = row[sKey] || '';
+
+                const pName = row['Project Name'];
+                const reg = row['Region'];
+                const mod = row['Product Model'];
+                const ser = row['Product Code/Serial'];
+
+                if(!pName && !mod && !ser) return false; 
+
+                if (!projectSearchTerm) return true;
+
+                return pName.toLowerCase().includes(projectSearchTerm) || 
+                       reg.toLowerCase().includes(projectSearchTerm) || 
+                       mod.toLowerCase().includes(projectSearchTerm) || 
+                       ser.toLowerCase().includes(projectSearchTerm);
+            });
+
+            document.getElementById('total-projects').innerText = filteredProjectData.length;
+
+            const totalPages = Math.ceil(filteredProjectData.length / projectItemsPerPage);
+            if(projectCurrentPage > totalPages) projectCurrentPage = totalPages || 1;
+            const startIndex = (projectCurrentPage - 1) * projectItemsPerPage;
+            const endIndex = startIndex + projectItemsPerPage;
+            const pageData = filteredProjectData.slice(startIndex, endIndex);
+
+            tbody.innerHTML = '';
+            
+            if(pageData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500">No project or equipment records found.</td></tr>`;
+            } else {
+                pageData.forEach((row, indexInPage) => {
+                    const globalIndex = startIndex + indexInPage; 
+                    const pName = row['Project Name'];
+                    const reg = row['Region'];
+                    const mod = row['Product Model'];
+                    const ser = row['Product Code/Serial'];
+                    
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-slate-50 transition border-b border-slate-50 group">
+                            <td class="px-6 py-3 text-slate-400 text-xs">${globalIndex + 1}</td>
+                            <td class="px-6 py-3 font-medium text-brand-700 whitespace-nowrap">${escapeHtml(pName) || '-'}</td>
+                            <td class="px-6 py-3 text-slate-600 text-xs">${escapeHtml(reg) || '-'}</td>
+                            <td class="px-6 py-3 text-slate-800 font-medium whitespace-nowrap">${escapeHtml(mod) || '-'}</td>
+                            <td class="px-6 py-3 text-slate-600 text-xs font-mono">${escapeHtml(ser) || '-'}</td>
+                            <td class="px-6 py-3 text-right whitespace-nowrap opacity-50 group-hover:opacity-100 transition-opacity">
+                                <button onclick="promptEditEquipment(${globalIndex})" class="text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 p-2 rounded transition" title="Edit Record"><i class="fa-solid fa-pen text-xs"></i></button>
+                                <button onclick="promptDeleteEquipment(${globalIndex})" class="text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 p-2 rounded ml-1 transition" title="Delete Record"><i class="fa-solid fa-trash text-xs"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+
+            renderProjectPagination(totalPages);
+        }
+
+        async function submitNewEngineer() {
+            const name = document.getElementById('new-engineer-name').value.trim();
+            const pos = document.getElementById('new-engineer-pos').value.trim();
+            const pass = document.getElementById('new-engineer-pass').value.trim();
+            if(!name) return showMessageModal("Please enter engineer's full name.", "Input Error");
+            if(!pass) return showMessageModal("Please enter a temporary password for the engineer.", "Input Error");
+            
+            const btn = document.getElementById('btn-add-eng');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'Saving...'; btn.disabled = true;
+
+            try {
+                const res = await fetch(APP_SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'add_engineer', sessionToken: loggedInUser.sessionToken, engineerName: name, engineerPosition: pos, engineerPassword: pass })
+                });
+                let data;
+                try { data = await res.json(); } catch(e) { throw new Error("Invalid server response."); }
+
+                if(data.status === 'success') {
+                    showMessageModal("New engineer added to the system successfully!", "Success");
+                    document.getElementById('new-engineer-name').value = '';
+                    document.getElementById('new-engineer-pos').value = '';
+                    document.getElementById('new-engineer-pass').value = '';
+                    fetchReferences(); 
+                } else {
+                    showMessageModal("Error: " + data.message, "System Error");
+                }
+            } catch (e) {
+                showMessageModal("Server error: " + e.message, "Network Error");
+            }
+            btn.innerHTML = originalText; btn.disabled = false;
+        }
+
+        async function submitNewProject() {
+            const regionSelect = document.getElementById('new-proj-region-select').value;
+            const regionInput = document.getElementById('new-proj-region-input').value.trim();
+            const isCustomRegion = document.getElementById('region-select-wrapper').classList.contains('hidden');
+            const region = isCustomRegion ? regionInput : regionSelect;
+
+            const projSelect = document.getElementById('new-proj-name-select').value;
+            const projInput = document.getElementById('new-proj-name-input').value.trim();
+            const isCustomProject = document.getElementById('project-select-wrapper').classList.contains('hidden');
+            const pName = isCustomProject ? projInput : projSelect;
+
+            const model = document.getElementById('new-proj-model').value.trim();
+            const serial = document.getElementById('new-proj-serial').value.trim();
+
+            if(!region) return showMessageModal("Please select or enter a Region.", "Input Error");
+            if(!pName) return showMessageModal("Please select or enter a Project Name.", "Input Error");
+            
+            const btn = document.getElementById('btn-add-project');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Saving...'; btn.disabled = true;
+
+            try {
+                const res = await fetch(APP_SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'add_project_equipment',
+                        sessionToken: loggedInUser.sessionToken,
+                        region: region,
+                        projectName: pName,
+                        productModel: model,
+                        serialNo: serial
+                    })
+                });
+                let data;
+                try { data = await res.json(); } catch(e) { throw new Error("Invalid server response."); }
+
+                if(data.status === 'success') {
+                    showMessageModal("New record added successfully!", "Success");
+                    document.getElementById('new-proj-model').value = '';
+                    document.getElementById('new-proj-serial').value = '';
+                    
+                    cancelCustomInput('region');
+                    fetchReferences();
+                } else {
+                    showMessageModal("Error: " + data.message, "System Error");
+                }
+            } catch (e) {
+                showMessageModal("Server error: " + e.message, "Network Error");
+            }
+            btn.innerHTML = originalText; btn.disabled = false;
+        }
+
+        function parseMyDate(dateStr) {
+            if(!dateStr) return new Date('');
+            if (dateStr.includes('/')) {
+                const parts = dateStr.split(/[/\s:-]/);
+                if (parts.length >= 3) {
+                    if(parts[2].length === 4) return new Date(`${parts[2]}-${parts[1]}-${parts[0]}T00:00:00`);
+                }
+            }
+            return new Date(dateStr);
+        }
+
+        function isValidDate(d) {
+            return d instanceof Date && !isNaN(d);
+        }
+
+        function applyGlobalFilters() {
+            const startVal = document.getElementById('date-start').value;
+            const endVal = document.getElementById('date-end').value;
+            const projVal = document.getElementById('global-project').value;
+            
+            let filtered = [...globalData];
+
+            if (startVal || endVal) {
+                const start = startVal ? new Date(startVal) : new Date('1970-01-01');
+                const end = endVal ? new Date(endVal) : new Date('2099-12-31');
+                end.setHours(23, 59, 59, 999); start.setHours(0, 0, 0, 0);
+                filtered = filtered.filter(row => {
+                    const rowDateStr = row.ReportDate || row.Timestamp;
+                    if (!rowDateStr) return false;
+                    let parsedDate = parseMyDate(rowDateStr);
+                    if (!isValidDate(parsedDate)) return true;
+                    return parsedDate >= start && parsedDate <= end;
+                });
+            }
+
+            if (projVal) {
+                filtered = filtered.filter(row => row.PlantName === projVal); 
+            }
+
+            dateFilteredData = filtered;
+            processData(dateFilteredData);
+            filterJobs();
+            filterDocs();
+        }
+
+        function clearGlobalFilters() {
+            document.getElementById('date-start').value = '';
+            document.getElementById('date-end').value = '';
+            document.getElementById('global-project').value = '';
+            applyGlobalFilters();
+        }
+
+        function processData(data) {
+            renderOverview(data);
+            renderJobMonitoring(data);
+            renderIssues(data);
+            renderPerformance(data);
+            renderDocuments(data);
+            populateFilters(globalData);
+        }
+        
+        async function fetchPublicHolidays(year) {
+            if (!year || fetchedHolidayYears.includes(year)) return;
+            const loader = document.getElementById('api-holiday-loader');
+            if(loader) loader.style.display = 'block';
+            
+            try {
+                const response = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/MY`);
+                if(response.ok) {
+                    const data = await response.json();
+                    const dates = data.map(h => h.date); 
+                    publicHolidays = [...new Set([...publicHolidays, ...dates])]; 
+                    fetchedHolidayYears.push(year);
+                }
+            } catch (e) {
+                console.error("Failed to fetch Malaysia public holiday API data", e);
+            } finally {
+                if(loader) loader.style.display = 'none';
+            }
+        }
+
+        function getDayType(dateObj) {
+            const day = dateObj.getDay();
+            const isWeekend = (day === 0 || day === 6); 
+            
+            const y = dateObj.getFullYear();
+            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const d = String(dateObj.getDate()).padStart(2, '0');
+            const dateStr = `${y}-${m}-${d}`;
+            
+            const isHoliday = publicHolidays.includes(dateStr);
+            
+            if(isHoliday) return { type: 'Public Holiday', special: true };
+            if(isWeekend) return { type: 'Weekend', special: true };
+            return { type: 'Normal Day', special: false };
+        }
+
+        function clearClaimDateFilter() {
+            document.getElementById('claim-start').value = '';
+            document.getElementById('claim-end').value = '';
+            generateAllowanceClaim();
+        }
+
+        function getAllowanceDateDisplay() {
+            const startVal = document.getElementById('claim-start').value;
+            const endVal = document.getElementById('claim-end').value;
+            if (!startVal && !endVal) return '-';
+            
+            const filterStart = startVal ? new Date(startVal) : null;
+            const filterEnd = endVal ? new Date(endVal) : null;
+            const options = { year: 'numeric', month: 'short', day: 'numeric' };
+            
+            if (filterStart && filterEnd) return `${filterStart.toLocaleDateString('en-GB', options)} to ${filterEnd.toLocaleDateString('en-GB', options)}`;
+            if (filterStart) return `Starting ${filterStart.toLocaleDateString('en-GB', options)}`;
+            if (filterEnd) return `Until ${filterEnd.toLocaleDateString('en-GB', options)}`;
+            return '-';
+        }
+
+        function getAllowanceFolderNameFriendly() {
+            const startVal = document.getElementById('claim-start').value;
+            const endVal = document.getElementById('claim-end').value;
+            if (!startVal && !endVal) return 'AllDates';
+            
+            const filterStart = startVal ? new Date(startVal) : null;
+            if (filterStart && !endVal) return `${filterStart.toLocaleDateString('en-GB', {month: 'long', year: 'numeric'}).replace(/\s+/g, '_')}`;
+            if (filterStart && endVal) return `${filterStart.toLocaleDateString('en-GB', {month: 'long', year: 'numeric'}).replace(/\s+/g, '_')}`;
+            return 'Claims';
+        }
+
+        function promptAddManualRow() {
+            document.getElementById('manual-row-date').value = '';
+            document.getElementById('manual-row-ticket').value = '';
+            document.getElementById('manual-row-price').value = '';
+            document.getElementById('manual-row-remark').value = '';
+            document.getElementById('addManualRowModal').style.display = 'flex';
+        }
+
+        function closeAddManualRowModal() {
+            document.getElementById('addManualRowModal').style.display = 'none';
+        }
+
+        async function executeAddManualRow() {
+            const dateVal = document.getElementById('manual-row-date').value;
+            const ticketVal = document.getElementById('manual-row-ticket').value.trim();
+            const priceVal = parseFloat(document.getElementById('manual-row-price').value);
+            const remarkVal = document.getElementById('manual-row-remark').value.trim();
+
+            if (!dateVal) return showMessageModal("Please enter date.", "Input Error");
+            if (!ticketVal) return showMessageModal("Please enter GSP Ticket Number.", "Input Error");
+            if (isNaN(priceVal) || priceVal < 0) return showMessageModal("Please enter a valid Price (USD).", "Input Error");
+            if (!remarkVal) return showMessageModal("Please enter Remark.", "Input Error");
+
+            const btn = document.getElementById('btn-save-manual-row');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'Adding...'; btn.disabled = true;
+
+            const d = new Date(dateVal + 'T12:00:00');
+            await fetchPublicHolidays(d.getFullYear());
+            const dayInfo = getDayType(d);
+
+            generatedClaimRows.push({
+                rawDate: d,
+                formattedDate: d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+                ticket: ticketVal,
+                desc: '-',
+                dayInfo: dayInfo,
+                isLastDay: false,
+                isManual: true,
+                manualPrice: priceVal,
+                manualRemark: remarkVal
+            });
+
+            generatedClaimRows.sort((a,b) => a.rawDate - b.rawDate);
+
+            btn.innerHTML = originalText; btn.disabled = false;
+            closeAddManualRowModal();
+            renderAllowanceTable();
+        }
+
+        function removeManualRow(index) {
+            if (!generatedClaimRows[index] || !generatedClaimRows[index].isManual) return;
+            generatedClaimRows.splice(index, 1);
+            renderAllowanceTable();
+        }
+
+        async function generateAllowanceClaim() {
+            const startVal = document.getElementById('claim-start').value; 
+            const endVal = document.getElementById('claim-end').value; 
+            const selectedEngineer = document.getElementById('claim-engineer').value;
+            const tbody = document.getElementById('allowance-table-body');
+            
+            if (!startVal && !endVal) {
+                tbody.innerHTML = `<tr><td colspan="9" class="px-6 py-8 text-center text-slate-500">Please select Start and End Dates to generate the claims table.</td></tr>`;
+                document.getElementById('allowance-date-subtitle').innerText = "Date: -";
+                generatedClaimRows = [];
+                calculateAllowanceTotals(); 
+                return;
+            }
+
+            const filterStart = startVal ? new Date(startVal) : new Date('2000-01-01');
+            const filterEnd = endVal ? new Date(endVal) : new Date('2099-12-31');
+            filterEnd.setHours(23, 59, 59, 999);
+            filterStart.setHours(0, 0, 0, 0);
+
+            const startYr = filterStart.getFullYear();
+            const endYr = filterEnd.getFullYear();
+            if (startVal) await fetchPublicHolidays(startYr);
+            if (endVal && endYr !== startYr && endYr !== 2099) await fetchPublicHolidays(endYr);
+
+            const displayDate = getAllowanceDateDisplay();
+            const engDisplay = selectedEngineer ? selectedEngineer : 'All Engineers';
+
+            generatedClaimRows = [];
+
+            globalData.forEach(row => {
+                // LOGIK BARU: Padanan teks penuh kepada separa (Partial String Match)
+                if (selectedEngineer) {
+                    const searchName = selectedEngineer.split('(')[0].trim().toLowerCase();
+                    const dbEngStr = (row.ServiceEngineer || '').toLowerCase();
+                    if (!dbEngStr.includes(searchName)) return; 
+                }
+
+                const startStr = row.ServiceJobDateFrom || row.ReportDate;
+                const endStr = row.ServiceJobDateTo || startStr;
+                
+                if(!startStr) return;
+
+                const startDate = parseMyDate(startStr);
+                const endDate = parseMyDate(endStr);
+                
+                if (isValidDate(startDate) && isValidDate(endDate)) {
+                    let d = new Date(startDate);
+                    d.setHours(12, 0, 0, 0);
+                    const endNoon = new Date(endDate);
+                    endNoon.setHours(12, 0, 0, 0);
+
+                    for (; d <= endNoon; d.setDate(d.getDate() + 1)) {
+                        if (d >= filterStart && d <= filterEnd) {
+                            const dayInfo = getDayType(d);
+                            const isLastDay = (d.getFullYear() === endDate.getFullYear() && d.getMonth() === endDate.getMonth() && d.getDate() === endDate.getDate());
+                            
+                            generatedClaimRows.push({
+                                rawDate: new Date(d),
+                                formattedDate: d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+                                ticket: ticketNoOf(row),
+                                desc: row.JobDescription || row.Task || '-',
+                                dayInfo: dayInfo,
+                                isLastDay: isLastDay,
+                                isManual: false
+                            });
+                        }
+                    }
+                }
+            });
+
+            generatedClaimRows.sort((a,b) => a.rawDate - b.rawDate);
+            
+            const exchangeRate = parseFloat(document.getElementById('exchange-rate').value) || 4.15;
+            document.getElementById('allowance-date-subtitle').innerHTML = `Date: ${displayDate} &nbsp;|&nbsp; Engineer: <span class="text-slate-800 font-bold">${engDisplay}</span> &nbsp;|&nbsp; <span class="text-brand-600">Current Rate: USD 1 = MYR ${exchangeRate.toFixed(2)}</span>`;
+
+            renderAllowanceTable();
+        }
+
+        function renderAllowanceTable() {
+            const tbody = document.getElementById('allowance-table-body');
+            tbody.innerHTML = '';
+
+            if (generatedClaimRows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="px-6 py-8 text-center text-slate-500">No jobs / records for the selection above.</td></tr>`;
+                calculateAllowanceTotals(); 
+                return;
+            }
+
+            generatedClaimRows.forEach((row, index) => {
+                const isManual = !!row.isManual;
+                const accDefault = row.isLastDay ? 'balik' : 'bermalam';
+                
+                let defaultPrice = 0;
+                if (isManual) {
+                    defaultPrice = row.manualPrice || 0;
+                } else if (accDefault === 'bermalam') {
+                    defaultPrice = row.dayInfo.special ? 112.5 : 90;
+                } else {
+                    defaultPrice = row.dayInfo.special ? 62.5 : 45;
+                }
+                
+                let dayBadge = '';
+                if(row.dayInfo.type === 'Public Holiday') dayBadge = `<span class="block mt-1 text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-bold w-max">Pub. Holiday</span>`;
+                else if(row.dayInfo.type === 'Weekend') dayBadge = `<span class="block mt-1 text-[10px] bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded font-bold w-max">Weekend</span>`;
+                if(isManual) dayBadge += `<span class="block mt-1 text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded font-bold w-max">Manual</span>`;
+
+                const receiptDisplay = row.isLastDay ? 'none' : 'block';
+                const noReceiptDisplay = row.isLastDay ? 'block' : 'none';
+
+                const accCell = isManual
+                    ? `<span class="inline-flex items-center text-[11px] bg-slate-100 text-slate-500 px-2 py-1.5 rounded italic"><i class="fa-solid fa-pen mr-1"></i>Manual</span>`
+                    : `<select id="acc-${index}" class="allowance-select w-full" onchange="updateRowPrice(${index})">
+                                <option value="bermalam" ${accDefault === 'bermalam' ? 'selected' : ''}>Overnight</option>
+                                <option value="balik" ${accDefault === 'balik' ? 'selected' : ''}>Return Home</option>
+                            </select>`;
+
+                const remarkValue = isManual ? (row.manualRemark || '') : (row.dayInfo.special ? row.dayInfo.type : '');
+                const removeBtn = isManual
+                    ? `<button onclick="removeManualRow(${index})" title="Delete this manual row" class="text-red-400 hover:text-red-600 shrink-0"><i class="fa-solid fa-trash-can text-xs"></i></button>`
+                    : '';
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 border-b border-slate-50 transition ${isManual ? 'bg-blue-50/40' : ''}">
+                        <td class="px-4 py-3 text-slate-600 text-center border-r border-slate-100">${index + 1}</td>
+                        <td class="px-4 py-3 text-slate-800 font-medium whitespace-nowrap border-r border-slate-100">
+                            ${row.formattedDate}
+                            ${dayBadge}
+                        </td>
+                        <td class="px-4 py-3 text-brand-600 font-medium text-xs break-all border-r border-slate-100">${row.ticket}</td>
+                        <td class="px-4 py-3 text-slate-800 text-xs border-r border-slate-100">${row.desc}</td>
+                        <td class="px-4 py-3 border-r border-slate-100">
+                            ${accCell}
+                        </td>
+                        <td class="px-4 py-3 border-r border-slate-100">
+                            <div id="receipt-container-${index}" style="display: ${receiptDisplay};">
+                                <input type="file" id="receipt-file-${index}" accept="image/*,.pdf" class="text-[10px] w-full text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100 cursor-pointer">
+                            </div>
+                            <div id="no-receipt-${index}" class="text-xs text-slate-400 italic" style="display: ${noReceiptDisplay};">Not Required</div>
+                        </td>
+                        <td class="px-4 py-3 border-r border-slate-100">
+                            <div class="flex items-center">
+                                <span class="text-xs text-slate-500 mr-1">$</span>
+                                <input type="number" id="price-usd-${index}" value="${defaultPrice}" step="0.5" class="allowance-input text-center font-bold text-slate-800" onchange="calculateAllowanceTotals()" onkeyup="calculateAllowanceTotals()">
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 text-center border-r border-slate-100">
+                            <span id="price-myr-${index}" class="font-bold text-slate-700">0.00</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center gap-1.5">
+                                <input type="text" id="remark-${index}" class="allowance-input" placeholder="Note..." value="${remarkValue}">
+                                ${removeBtn}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            calculateAllowanceTotals();
+        }
+
+        function updateRowPrice(index) {
+            const accSelect = document.getElementById(`acc-${index}`).value;
+            const isSpecial = generatedClaimRows[index].dayInfo.special;
+            const receiptBox = document.getElementById(`receipt-container-${index}`);
+            const noReceiptText = document.getElementById(`no-receipt-${index}`);
+            const priceInput = document.getElementById(`price-usd-${index}`);
+
+            if (accSelect === 'bermalam') {
+                priceInput.value = isSpecial ? 112.5 : 90;
+                receiptBox.style.display = 'block';
+                noReceiptText.style.display = 'none';
+            } else {
+                priceInput.value = isSpecial ? 62.5 : 45;
+                receiptBox.style.display = 'none';
+                noReceiptText.style.display = 'block';
+            }
+            calculateAllowanceTotals();
+        }
+
+        function calculateAllowanceTotals() {
+            let totalUSD = 0;
+            let totalMYR = 0;
+            const exchangeRate = parseFloat(document.getElementById('exchange-rate').value) || 4.15;
+
+            const startVal = document.getElementById('claim-start').value;
+            const endVal = document.getElementById('claim-end').value;
+            const engineerInput = document.getElementById('claim-engineer') ? document.getElementById('claim-engineer').value : '';
+            
+            if(startVal || endVal) {
+                const displayDate = getAllowanceDateDisplay();
+                const engDisplay = engineerInput ? engineerInput : 'All Engineers';
+                
+                document.getElementById('allowance-date-subtitle').innerHTML = `Date: ${displayDate} &nbsp;|&nbsp; Engineer: <span class="text-slate-800 font-bold">${engDisplay}</span> &nbsp;|&nbsp; <span class="text-brand-600">Current Rate: USD 1 = MYR ${exchangeRate.toFixed(2)}</span>`;
+            }
+
+            generatedClaimRows.forEach((_, index) => {
+                const usdInput = document.getElementById(`price-usd-${index}`);
+                if (usdInput) {
+                    const valUSD = parseFloat(usdInput.value) || 0;
+                    const valMYR = valUSD * exchangeRate;
+                    
+                    document.getElementById(`price-myr-${index}`).innerText = valMYR.toFixed(2);
+                    totalUSD += valUSD;
+                    totalMYR += valMYR;
+                }
+            });
+
+            document.getElementById('kpi-allowance-myr').innerText = 'RM ' + totalMYR.toFixed(2);
+            document.getElementById('kpi-allowance-usd').innerText = '$ ' + totalUSD.toFixed(2);
+            
+            const footerUsd = document.getElementById('footer-total-usd');
+            const footerMyr = document.getElementById('footer-total-myr');
+            if(footerUsd) footerUsd.innerText = totalUSD.toFixed(2);
+            if(footerMyr) footerMyr.innerText = totalMYR.toFixed(2);
+        }
+
+        async function getReceiptsBase64() {
+            const receipts = [];
+            for (let i = 0; i < generatedClaimRows.length; i++) {
+                const input = document.getElementById(`receipt-file-${i}`);
+                if (input && input.files.length > 0) {
+                    const file = input.files[0];
+                    const base64 = await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => resolve(e.target.result);
+                        reader.onerror = (e) => resolve(null); 
+                        reader.readAsDataURL(file);
+                    });
+                    
+                    if (base64) {
+                        receipts.push({
+                            dateStr: generatedClaimRows[i].formattedDate.replace(/\//g, ''), 
+                            base64: base64,
+                            name: file.name
+                        });
+                    }
+                }
+            }
+            return receipts;
+        }
+
+        function createStyledAllowanceWorkbook() {
+            const subtitleEl = document.getElementById('allowance-date-subtitle');
+            const dateText = subtitleEl ? subtitleEl.innerText.replace(/\u00a0/g, ' ') : 'Claims';
+            const exchangeRate = document.getElementById('exchange-rate').value;
+            
+            let exportData = [];
+            exportData.push(["ETS Business Trip Summary", "", "", "", "", "", "", ""]);
+            exportData.push([dateText, "", "", "", "", "", "", ""]);
+            exportData.push(["", "", "", "", "", "", "", ""]); 
+            exportData.push(["No", "Date", "GSP Ticket Number", "Job Description", "Accommodation", "Price (USD)", "Price (MYR)", "Remark"]);
+            
+            let totalU = 0, totalM = 0;
+
+            generatedClaimRows.forEach((row, index) => {
+                const accEl = document.getElementById(`acc-${index}`);
+                const acc = row.isManual ? 'Manual' : (accEl ? accEl.options[accEl.selectedIndex].text : '');
+                const usd = parseFloat(document.getElementById(`price-usd-${index}`).value) || 0;
+                const myr = parseFloat(document.getElementById(`price-myr-${index}`).innerText) || 0;
+                const remark = document.getElementById(`remark-${index}`).value || '';
+                totalU += usd; totalM += myr;
+
+                exportData.push([ index + 1, row.formattedDate, row.ticket, row.desc, acc, usd, myr, remark ]);
+            });
+            
+            const dataEndRow = exportData.length;
+
+            exportData.push(["", "", "", "", "Total (USD):", totalU, "", ""]);
+            exportData.push(["", "", "", "", "Total (MYR):", "", totalM, ""]);
+            exportData.push(["", "", "", "", "Exchange Rate:", `1 USD = ${exchangeRate} MYR`, "", ""]);
+            
+            const ws = XLSX.utils.aoa_to_sheet(exportData);
+
+            const thinBorder = {
+                top: { style: 'thin', color: { rgb: "000000" } },
+                bottom: { style: 'thin', color: { rgb: "000000" } },
+                left: { style: 'thin', color: { rgb: "000000" } },
+                right: { style: 'thin', color: { rgb: "000000" } }
+            };
+
+            for (let R = 0; R < exportData.length; ++R) {
+                for (let C = 0; C < exportData[R].length; ++C) {
+                    let cellRef = XLSX.utils.encode_cell({r: R, c: C});
+                    if (!ws[cellRef]) ws[cellRef] = { t: 's', v: '' }; 
+
+                    ws[cellRef].s = ws[cellRef].s || {};
+                    ws[cellRef].s.font = ws[cellRef].s.font || { name: 'Calibri', sz: 11 };
+                    ws[cellRef].s.alignment = ws[cellRef].s.alignment || { vertical: 'center' };
+
+                    if (R === 0 && C === 0) {
+                        ws[cellRef].s.font = { bold: true, sz: 16 };
+                        ws[cellRef].s.alignment = { horizontal: 'center', vertical: 'center' };
+                    }
+                    if (R === 1 && C === 0) {
+                        ws[cellRef].s.alignment = { horizontal: 'center', vertical: 'center', wrapText: true };
+                    }
+                    
+                    if (R === 3) {
+                        ws[cellRef].s.font = { bold: true };
+                        ws[cellRef].s.fill = { fgColor: { rgb: "DDEBF7" } };
+                        ws[cellRef].s.border = thinBorder;
+                        ws[cellRef].s.alignment = { horizontal: 'center', vertical: 'center', wrapText: true };
+                    }
+                    
+                    if (R > 3 && R < dataEndRow) {
+                        if (C <= 7) ws[cellRef].s.border = thinBorder;
+                        if (C === 0 || C === 1 || C === 4) ws[cellRef].s.alignment = { horizontal: 'center', vertical: 'center' };
+                        
+                        if (C === 5 || C === 6) {
+                            ws[cellRef].t = 'n';
+                            ws[cellRef].z = '#,##0.00';
+                            ws[cellRef].s.alignment = { horizontal: 'center', vertical: 'center' };
+                        }
+                    }
+                    
+                    if (R >= dataEndRow && R <= dataEndRow + 2) {
+                        if (C >= 4 && C <= 6) {
+                            ws[cellRef].s.border = thinBorder;
+                            ws[cellRef].s.font = { bold: true };
+                            if (C === 4) ws[cellRef].s.alignment = { horizontal: 'left', vertical: 'center' };
+                            if (C === 5 || C === 6) ws[cellRef].s.alignment = { horizontal: 'center', vertical: 'center' };
+                            
+                            if (R === dataEndRow && C === 5) { ws[cellRef].t = 'n'; ws[cellRef].z = '#,##0.00'; }
+                            if (R === dataEndRow + 1 && C === 6) { ws[cellRef].t = 'n'; ws[cellRef].z = '#,##0.00'; }
+                        }
+                    }
+                }
+            }
+
+            ws['!cols'] = [
+                { wch: 5 },  { wch: 12 }, { wch: 20 }, { wch: 45 },
+                { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 25 }
+            ];
+            
+            if (!ws['!merges']) ws['!merges'] = [];
+            // Merge tajuk utama (Baris 1, Lajur A ke H)
+            ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 7 } });
+            // Merge sub-tajuk (Baris 2, Lajur A ke H)
+            ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 7 } });
+            // Merge butiran "Exchange Rate" di footer
+            ws['!merges'].push({ s: { r: dataEndRow + 2, c: 5 }, e: { r: dataEndRow + 2, c: 6 } });
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Allowances");
+            return wb;
+        }
+
+        function generateExcelBase64() {
+            const wb = createStyledAllowanceWorkbook();
+            return XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
+        }
+
+        async function generatePDFBase64() {
+            const element = document.getElementById('allowance-export-area');
+            
+            generatedClaimRows.forEach((_, i) => {
+                const usdInput = document.getElementById(`price-usd-${i}`);
+                const remarkInput = document.getElementById(`remark-${i}`);
+                if(usdInput) usdInput.setAttribute('value', usdInput.value);
+                if(remarkInput) remarkInput.setAttribute('value', remarkInput.value);
+            });
+
+            const opt = {
+                margin:       10,
+                filename:     'Temp.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' } 
+            };
+            
+            element.classList.remove('overflow-hidden');
+            const tableWrapper = element.querySelector('.overflow-x-auto');
+            if (tableWrapper) tableWrapper.classList.remove('overflow-x-auto');
+            
+            const pdfBase64 = await new Promise((resolve, reject) => {
+                html2pdf().set(opt).from(element).toPdf().get('pdf')
+                .then(function(pdf) {
+                    resolve(pdf.output('datauristring'));
+                })
+                .catch(err => {
+                    console.error("PDF generation error:", err);
+                    resolve(null); 
+                });
+            });
+
+            element.classList.add('overflow-hidden');
+            if (tableWrapper) tableWrapper.classList.add('overflow-x-auto');
+            
+            return pdfBase64;
+        }
+
+        async function submitClaimToSystem() {
+            const engineer = document.getElementById('claim-engineer').value;
+            if (!engineer) {
+                return showMessageModal("Please select a specific Service Engineer before submitting claims.", "Error");
+            }
+            if (generatedClaimRows.length === 0) {
+                return showMessageModal("Claims table is empty. Please select working dates.", "Error");
+            }
+
+            const btn = document.getElementById('btn-submit-claim');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Processing...';
+            btn.disabled = true;
+
+            showTechLoader("GENERATING FILES & SUBMITTING CLAIMS...");
+
+            try {
+                const excelB64 = generateExcelBase64();
+                const pdfB64 = await generatePDFBase64();
+                
+                if(!pdfB64) throw new Error("Failed to generate PDF automatically. Please try using Chrome browser.");
+
+                const receiptsArr = await getReceiptsBase64();
+
+                const totalUEl = document.getElementById('footer-total-usd');
+                const totalMEl = document.getElementById('footer-total-myr');
+                const totalU = totalUEl ? parseFloat(totalUEl.innerText) || 0 : 0;
+                const totalM = totalMEl ? parseFloat(totalMEl.innerText) || 0 : 0;
+                
+                const subtitleEl = document.getElementById('allowance-date-subtitle');
+                const periodRaw = subtitleEl ? subtitleEl.innerText : 'Claims';
+                const periodFriendly = getAllowanceFolderNameFriendly();
+
+                const payload = {
+                    action: "submit_claim",
+                    sessionToken: loggedInUser.sessionToken,
+                    engineerName: engineer,
+                    claimPeriodRaw: periodRaw,
+                    claimPeriodFile: periodFriendly,
+                    totalUSD: totalU,
+                    totalMYR: totalM,
+                    excelBase64: excelB64,
+                    pdfBase64: pdfB64,
+                    receipts: receiptsArr
+                };
+
+                const res = await fetch(APP_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
+                let data;
+                try {
+                    data = await res.json();
+                } catch(e) {
+                    throw new Error("Server failed to process the request. Please check Apps Script link or Drive Folder ID.");
+                }
+
+                hideTechLoader();
+                if (data.status === 'success') {
+                    showSuccessClaimModal("All documents have been consolidated and successfully recorded in the database.", data.folderUrl);
+                } else {
+                    showMessageModal("Server error: " + data.message, "Failed to Submit");
+                }
+            } catch (err) {
+                hideTechLoader();
+                showMessageModal(err.message, "Process Error");
+            }
+
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+        }
+
+        function exportAllowanceExcel() {
+            if(generatedClaimRows.length === 0) return showMessageModal("No claims data to export.", "Failed");
+            const wb = createStyledAllowanceWorkbook();
+            XLSX.writeFile(wb, "Sungrow_ETS_Summary.xlsx");
+        }
+
+        function exportAllowancePDF() {
+            if(generatedClaimRows.length === 0) return showMessageModal("No claims data to export.", "Failed");
+            const element = document.getElementById('allowance-export-area');
+            generatedClaimRows.forEach((_, i) => {
+                const usdInput = document.getElementById(`price-usd-${i}`);
+                const remarkInput = document.getElementById(`remark-${i}`);
+                if(usdInput) usdInput.setAttribute('value', usdInput.value);
+                if(remarkInput) remarkInput.setAttribute('value', remarkInput.value);
+            });
+            const opt = { margin: 10, filename: 'Sungrow_ETS_Summary.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' } };
+            element.classList.remove('overflow-hidden');
+            const tableWrapper = element.querySelector('.overflow-x-auto');
+            if (tableWrapper) tableWrapper.classList.remove('overflow-x-auto');
+            html2pdf().set(opt).from(element).save().then(() => {
+                element.classList.add('overflow-hidden');
+                if (tableWrapper) tableWrapper.classList.add('overflow-x-auto');
+            });
+        }
+
+        function renderOverview(data) {
+            const total = data.length;
+            const completed = data.filter(d => (d.JobStatus || '').toLowerCase() === 'completed').length;
+            const pendingApproval = data.filter(d => (d.Status || '').toLowerCase() === 'pending').length;
+            const ratings = data.map(d => parseFloat(d.ServiceRating)).filter(r => !isNaN(r) && r > 0);
+            const avgRating = ratings.length ? (ratings.reduce((a,b) => a+b, 0) / ratings.length).toFixed(1) : '-';
+
+            document.getElementById('kpi-total').innerText = total;
+            document.getElementById('kpi-completed').innerText = completed;
+            document.getElementById('kpi-pending').innerText = pendingApproval;
+            document.getElementById('kpi-rating').innerText = avgRating === '-' ? '-' : avgRating + ' / 5';
+
+            const tbody = document.getElementById('recent-table-body');
+            tbody.innerHTML = '';
+            data.slice(0, 5).forEach(row => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="px-6 py-3 whitespace-nowrap"><div class="font-medium text-slate-800">${escapeHtml(row.ReportDate) || '-'}</div></td>
+                        <td class="px-6 py-3"><div class="font-medium text-slate-800">${escapeHtml(row.PlantName) || '-'}</div><div class="text-xs text-slate-500">${escapeHtml(row.Task) || ''}</div></td>
+                        <td class="px-6 py-3 text-slate-600">${ticketNoOf(row)}</td>
+                        <td class="px-6 py-3 text-slate-800">${escapeHtml(row.ServiceEngineer) || '-'}</td>
+                        <td class="px-6 py-3">${getJobStatusBadge(row.JobStatus)}</td>
+                    </tr>`;
+            });
+
+            const statusCounts = {};
+            data.forEach(d => { const s = d.JobStatus || 'Unknown'; statusCounts[s] = (statusCounts[s] || 0) + 1; });
+            if (charts.status) charts.status.destroy();
+            charts.status = new Chart(document.getElementById('statusChart').getContext('2d'), {
+                type: 'doughnut',
+                data: { labels: Object.keys(statusCounts), datasets: [{ data: Object.values(statusCounts), backgroundColor: ['#0ea5e9', '#10b981', '#f59e0b', '#64748b'], borderWidth: 0, hoverOffset: 4 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } }, cutout: '70%' }
+            });
+
+            const datesCount = {};
+            data.forEach(d => { if (d.ReportDate) datesCount[d.ReportDate] = (datesCount[d.ReportDate] || 0) + 1; });
+            const sortedDates = Object.keys(datesCount).sort((a,b) => new Date(a) - new Date(b)).slice(-10);
+            if (charts.trend) charts.trend.destroy();
+            const ctxTrend = document.getElementById('trendChart').getContext('2d');
+            const gradient = ctxTrend.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, 'rgba(14, 165, 233, 0.5)'); gradient.addColorStop(1, 'rgba(14, 165, 233, 0.0)');
+            charts.trend = new Chart(ctxTrend, {
+                type: 'line',
+                data: { labels: sortedDates, datasets: [{ label: 'Jobs Executed', data: sortedDates.map(date => datesCount[date]), borderColor: '#0284c7', backgroundColor: gradient, borderWidth: 2, fill: true, tension: 0.4, pointBackgroundColor: '#0284c7', pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 4 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { borderDash: [4, 4], color: '#f1f5f9' }, ticks: { stepSize: 1 } }, x: { grid: { display: false } } } }
+            });
+        }
+
+        function renderJobMonitoring(data) {
+            const tbody = document.getElementById('monitoring-table-body');
+            tbody.innerHTML = '';
+            if (data.length === 0) { tbody.innerHTML = `<tr><td colspan="8" class="px-6 py-8 text-center text-slate-500">No records found.</td></tr>`; return; }
+            data.forEach(row => {
+                const jobDateRange = row.ServiceJobDateFrom ? (row.ServiceJobDateTo && row.ServiceJobDateTo !== row.ServiceJobDateFrom ? `${row.ServiceJobDateFrom} - ${row.ServiceJobDateTo}` : row.ServiceJobDateFrom) : '-';
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 border-b border-slate-50 transition">
+                        <td class="px-6 py-4 font-medium text-brand-600 whitespace-nowrap">${escapeHtml(row.ReportID) || '-'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-slate-800">${escapeHtml(row.ReportDate) || '-'}</td>
+                        <td class="px-6 py-4"><div class="font-bold text-slate-800">${escapeHtml(row.PlantName) || '-'}</div><div class="text-xs text-slate-500">${escapeHtml(row.EPCC) || ''}</div></td>
+                        <td class="px-6 py-4 text-slate-600 text-sm">${ticketNoOf(row)}</td>
+                        <td class="px-6 py-4 text-slate-600 text-xs">${escapeHtml(jobDateRange)}</td>
+                        <td class="px-6 py-4 text-slate-800">${escapeHtml(row.ServiceEngineer) || '-'}</td>
+                        <td class="px-6 py-4 text-slate-600 text-xs">${escapeHtml(row.Task) || '-'}</td>
+                        <td class="px-6 py-4">${getJobStatusBadge(row.JobStatus)}</td>
+                    </tr>`;
+            });
+        }
+
+        function populateFilters(data) {
+            const statuses = new Set();
+            const engineers = new Set();
+            const projects = new Set();
+            
+            data.forEach(d => { 
+                if (d.JobStatus) statuses.add(d.JobStatus); 
+                // LOGIK BARU: Pisahkan nama jika ianya kerja berkumpulan dan buang pangkat
+                if (d.ServiceEngineer) {
+                    d.ServiceEngineer.split(',').forEach(e => {
+                        const cleanName = e.split('(')[0].trim();
+                        if (cleanName) engineers.add(cleanName);
+                    });
+                }
+                if (d.PlantName) projects.add(d.PlantName);
+            });
+            
+            const filterSelect = document.getElementById('filter-status');
+            const currentStatus = filterSelect.value;
+            filterSelect.innerHTML = '<option value="">All Job Status</option>';
+            statuses.forEach(s => { filterSelect.innerHTML += `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`; });
+            filterSelect.value = currentStatus;
+
+            const engSelect = document.getElementById('claim-engineer');
+            if (engSelect) {
+                if (!isManager) {
+                    engSelect.innerHTML = `<option value="${escapeHtml(loggedInUser.name)}">${escapeHtml(loggedInUser.name)}</option>`;
+                    engSelect.value = loggedInUser.name;
+                    engSelect.disabled = true;
+                    engSelect.classList.add('bg-slate-200', 'cursor-not-allowed', 'text-slate-500');
+                } else {
+                    const currentEng = engSelect.value;
+                    engSelect.innerHTML = '<option value="">All Engineers</option>';
+                    const sortedEng = Array.from(engineers).sort();
+                    sortedEng.forEach(e => { engSelect.innerHTML += `<option value="${escapeHtml(e)}">${escapeHtml(e)}</option>`; });
+                    engSelect.value = currentEng;
+                }
+            }
+
+            const projSelect = document.getElementById('global-project');
+            if (projSelect) {
+                const currentProj = projSelect.value;
+                projSelect.innerHTML = '<option value="">All Projects</option>';
+                const sortedProjects = Array.from(projects).sort();
+                sortedProjects.forEach(p => { projSelect.innerHTML += `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`; });
+                projSelect.value = currentProj;
+            }
+        }
+
+        function filterJobs() {
+            const searchVal = document.getElementById('search-job').value.toLowerCase();
+            const statusVal = document.getElementById('filter-status').value.toLowerCase();
+            const filteredData = dateFilteredData.filter(row => {
+                const matchSearch = (row.PlantName || '').toLowerCase().includes(searchVal) ||
+                                     (row.ReportID || '').toLowerCase().includes(searchVal) ||
+                                     (row.APACTicketNo || '').toLowerCase().includes(searchVal) ||
+                                     (row.GSPTicketNo || '').toLowerCase().includes(searchVal);
+                const matchStatus = statusVal === '' || (row.JobStatus || '').toLowerCase() === statusVal;
+                return matchSearch && matchStatus;
+            });
+            renderJobMonitoring(filteredData);
+        }
+
+        function renderIssues(data) {
+            const container = document.getElementById('issues-container');
+            container.innerHTML = '';
+            const pendingData = data.filter(d => (d.JobStatus || '').toLowerCase() === 'pending');
+            document.getElementById('issue-count-badge').innerText = pendingData.length;
+
+            if (pendingData.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white rounded-xl p-10 text-center border border-slate-100 shadow-sm">
+                        <div class="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center text-2xl mx-auto mb-4"><i class="fa-solid fa-shield-check"></i></div>
+                        <h4 class="text-lg font-medium text-slate-800">All Clear!</h4>
+                        <p class="text-slate-500 mt-1">No pending jobs at the moment.</p>
+                    </div>`;
+                return;
+            }
+
+            pendingData.forEach(row => {
+                container.innerHTML += `
+                    <div class="bg-white rounded-lg p-5 border-l-4 border-red-500 shadow-sm flex flex-col md:flex-row gap-4 hover:shadow-md transition">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2 mb-2 flex-wrap gap-y-1">
+                                <span class="bg-slate-100 text-slate-700 text-xs font-mono px-2 py-0.5 rounded">${escapeHtml(row.ReportID) || 'No ID'}</span>
+                                <span class="text-xs text-slate-500"><i class="fa-regular fa-calendar mr-1"></i> ${escapeHtml(row.ReportDate) || '-'}</span>
+                                <span class="text-xs text-brand-600 font-medium bg-brand-50 px-2 py-0.5 rounded">${escapeHtml(row.PlantName) || '-'}</span>
+                                <span class="text-xs text-slate-500">${escapeHtml(row.Task) || ''}</span>
+                            </div>
+                            <div class="bg-red-50 text-red-800 p-3 rounded-md text-sm border border-red-100 mb-3">
+                                <strong class="text-red-900 block mb-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Reason for Pending:</strong>
+                                ${escapeHtml(row.PendingReason) || 'No reason given.'}
+                            </div>
+                            <p class="text-sm text-slate-600"><strong>Job Description:</strong> ${escapeHtml(row.JobDescription) || '-'}</p>
+                        </div>
+                        <div class="w-full md:w-64 bg-slate-50 p-4 rounded-lg flex flex-col justify-center border border-slate-100">
+                            <p class="text-xs text-slate-500 uppercase tracking-wide mb-1">Service Engineer</p>
+                            <p class="font-medium text-slate-800">${escapeHtml(row.ServiceEngineer) || 'Unknown'}</p>
+                            <p class="text-xs text-slate-500 mb-3">Ticket: ${ticketNoOf(row)}</p>
+                            <p class="text-xs text-slate-500 uppercase tracking-wide mb-1">Approval Status</p>
+                            <div>${getApprovalStatusBadge(row.Status)}</div>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        function renderPerformance(data) {
+            // 1. Calculate Summary KPIs
+            let totalDuration = 0, validDurationCount = 0, totalEq = 0, totalParts = 0, totalPending = 0;
+            
+            data.forEach(d => {
+                if (d.ServiceJobDateFrom) {
+                    let start = new Date(d.ServiceJobDateFrom);
+                    let end = d.ServiceJobDateTo ? new Date(d.ServiceJobDateTo) : start;
+                    if (!isNaN(start) && !isNaN(end)) {
+                        let diffDays = Math.ceil(Math.abs(end - start) / (1000 * 60 * 60 * 24)) + 1;
+                        totalDuration += diffDays;
+                        validDurationCount++;
+                    }
+                }
+                
+                try {
+                    let eqArr = JSON.parse(d.EquipmentData);
+                    if (Array.isArray(eqArr)) totalEq += eqArr.length;
+                } catch(e) {}
+                
+                try {
+                    let spArr = JSON.parse(d.SparePartData); 
+                    if (Array.isArray(spArr)) {
+                        spArr.forEach(sp => { if (sp.name) totalParts += (parseInt(sp.qty) || 1); });
+                    }
+                } catch(e) {}
+                
+                if ((d.JobStatus || '').toLowerCase() === 'pending') totalPending++;
+            });
+            
+            document.getElementById('perf-kpi-duration').innerText = validDurationCount > 0 ? (totalDuration / validDurationCount).toFixed(1) + ' Days' : '0 Days';
+            document.getElementById('perf-kpi-eq').innerText = totalEq;
+            document.getElementById('perf-kpi-parts').innerText = totalParts;
+            document.getElementById('perf-kpi-pending').innerText = totalPending;
+
+            // 2. Staff Workload Chart & Table
+            const staffStats = {};
+            data.forEach(d => {
+                if (!d.ServiceEngineer) return;
+                const name = d.ServiceEngineer;
+                if (!staffStats[name]) staffStats[name] = { count: 0, lastDate: d.ReportDate, ratings: [] };
+                
+                staffStats[name].count++;
+                if (new Date(d.ReportDate) > new Date(staffStats[name].lastDate)) staffStats[name].lastDate = d.ReportDate;
+                
+                const r = parseFloat(d.ServiceRating);
+                if (!isNaN(r) && r > 0) staffStats[name].ratings.push(r);
+            });
+
+            const tbody = document.getElementById('staff-table-body');
+            tbody.innerHTML = '';
+            const staffArray = Object.keys(staffStats).map(name => ({ name, ...staffStats[name] })).sort((a,b) => b.count - a.count);
+
+            staffArray.forEach(staff => {
+                const avgR = staff.ratings.length ? (staff.ratings.reduce((a,b)=>a+b,0) / staff.ratings.length).toFixed(1) : '-';
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition border-b border-slate-50">
+                        <td class="px-6 py-4 font-medium text-slate-800 flex items-center">
+                            <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-xs font-bold mr-3">${staff.name.charAt(0)}</div>
+                            <div class="flex flex-col"><span class="text-sm">${staff.name.split(' (')[0]}</span><span class="text-[10px] text-slate-500">${staff.name.includes('(') ? '(' + staff.name.split('(')[1] : ''}</span></div>
+                        </td>
+                        <td class="px-6 py-4 text-center"><span class="bg-blue-50 text-brand-600 font-bold px-3 py-1 rounded-full border border-blue-100">${staff.count}</span></td>
+                        <td class="px-6 py-4 text-center text-yellow-600 font-bold">${avgR === '-' ? '-' : avgR + ' <i class="fa-solid fa-star text-[10px]"></i>'}</td>
+                        <td class="px-6 py-4 text-slate-500 font-mono text-xs">${staff.lastDate || '-'}</td>
+                    </tr>`;
+            });
+
+            if (charts.staff) charts.staff.destroy();
+            charts.staff = new Chart(document.getElementById('staffChart').getContext('2d'), {
+                type: 'bar',
+                data: { labels: staffArray.map(s => s.name.split(' (')[0]), datasets: [{ label: 'Jobs Completed', data: staffArray.map(s => s.count), backgroundColor: '#3b82f6', borderRadius: 4 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { borderDash: [4, 4], color: '#f1f5f9' }, ticks: { stepSize: 1 } }, x: { grid: { display: false } } } }
+            });
+
+            // 3. Project Distribution Pie
+            const projStats = {};
+            data.forEach(d => { if (d.PlantName) projStats[d.PlantName] = (projStats[d.PlantName] || 0) + 1; });
+            let projArr = Object.keys(projStats).map(c => ({ name: c, count: projStats[c] })).sort((a,b) => b.count - a.count);
+            let labels = [], counts = [];
+            if (projArr.length > 5) {
+                labels = projArr.slice(0,4).map(c => c.name.substring(0, 15) + (c.name.length > 15 ? '...' : ''));
+                counts = projArr.slice(0,4).map(c => c.count);
+                const others = projArr.slice(4).reduce((sum, c) => sum + c.count, 0);
+                labels.push('Others'); counts.push(others);
+            } else {
+                labels = projArr.map(c => c.name); counts = projArr.map(c => c.count);
+            }
+            if (charts.client) charts.client.destroy();
+            charts.client = new Chart(document.getElementById('clientChart').getContext('2d'), {
+                type: 'pie',
+                data: { labels: labels, datasets: [{ data: counts, backgroundColor: ['#0ea5e9', '#a855f7', '#10b981', '#f59e0b', '#64748b'], borderWidth: 2, borderColor: '#ffffff' }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } } } }
+            });
+
+            // 4. Top Equipment Models
+            const eqStats = {};
+            data.forEach(d => {
+                if (d.EquipmentData) {
+                    try {
+                        let eqArr = JSON.parse(d.EquipmentData);
+                        if (Array.isArray(eqArr)) {
+                            eqArr.forEach(eq => {
+                                if (eq && eq.model) {
+                                    const m = eq.model.trim();
+                                    if (m) eqStats[m] = (eqStats[m] || 0) + 1;
+                                }
+                            });
+                        }
+                    } catch(e){}
+                }
+            });
+            const topEq = Object.keys(eqStats).map(k => ({ name: k, count: eqStats[k] })).sort((a, b) => b.count - a.count).slice(0, 5);
+
+            if (charts.equipment) charts.equipment.destroy();
+            charts.equipment = new Chart(document.getElementById('equipmentChart').getContext('2d'), {
+                type: 'bar',
+                data: { 
+                    labels: topEq.map(e => e.name.length > 20 ? e.name.substring(0,20)+'...' : e.name), 
+                    datasets: [{ 
+                        label: 'Frequency of Reports', 
+                        data: topEq.map(e => e.count), 
+                        backgroundColor: '#ef4444', 
+                        borderRadius: 4 
+                    }] 
+                },
+                options: { 
+                    indexAxis: 'y', 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { legend: { display: false } }, 
+                    scales: { 
+                        x: { beginAtZero: true, grid: { borderDash: [4, 4], color: '#f1f5f9' }, ticks: { stepSize: 1 } }, 
+                        y: { grid: { display: false }, ticks: { font: { size: 11 } } } 
+                    } 
+                }
+            });
+
+            // 5. Top Consumed Spare Parts
+            const spStats = {};
+            data.forEach(d => {
+                if (d.SparePartData) {
+                    try {
+                        let spArr = JSON.parse(d.SparePartData); 
+                        if (Array.isArray(spArr)) {
+                            spArr.forEach(sp => {
+                                if (sp && sp.name) {
+                                    const n = sp.name.trim();
+                                    const q = parseInt(sp.qty) || 1;
+                                    if (n) spStats[n] = (spStats[n] || 0) + q;
+                                }
+                            });
+                        }
+                    } catch(e){}
+                }
+            });
+            const topSp = Object.keys(spStats).map(k => ({ name: k, count: spStats[k] })).sort((a, b) => b.count - a.count).slice(0, 5);
+
+            if (charts.sparePart) charts.sparePart.destroy();
+            charts.sparePart = new Chart(document.getElementById('sparePartChart').getContext('2d'), {
+                type: 'bar',
+                data: { 
+                    labels: topSp.map(s => s.name.length > 20 ? s.name.substring(0,20)+'...' : s.name), 
+                    datasets: [{ 
+                        label: 'Total Consumed', 
+                        data: topSp.map(s => s.count), 
+                        backgroundColor: '#f59e0b', 
+                        borderRadius: 4 
+                    }] 
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { legend: { display: false } }, 
+                    scales: { 
+                        y: { beginAtZero: true, grid: { borderDash: [4, 4], color: '#f1f5f9' }, ticks: { stepSize: 1 } }, 
+                        x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 45, minRotation: 45 } } 
+                    } 
+                }
+            });
+        }
+
+        function getPdfUrl(idOrUrl) {
+            if (!idOrUrl) return '#';
+            if (idOrUrl.startsWith('http')) return idOrUrl;
+            return `https://drive.google.com/file/d/${idOrUrl}/view`;
+        }
+        function formatPhoneForWa(phone) {
+            if (!phone) return '';
+            let cleaned = phone.replace(/[\s\-\(\)]/g, '');
+            if (cleaned.startsWith('0')) cleaned = '60' + cleaned.substring(1);
+            return cleaned;
+        }
+        function copyToClipboard(text, btnElement) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text; textArea.style.position = "fixed";
+            document.body.appendChild(textArea); textArea.focus(); textArea.select();
+            try {
+                document.execCommand('copy');
+                if (btnElement) {
+                    const originalHtml = btnElement.innerHTML;
+                    btnElement.innerHTML = '<i class="fa-solid fa-check mr-1 text-emerald-500"></i> Copied Successfully';
+                    btnElement.classList.add('bg-emerald-50', 'text-emerald-700', 'border-emerald-200');
+                    btnElement.classList.remove('bg-slate-100', 'text-slate-600', 'border-slate-200');
+                    setTimeout(() => {
+                        btnElement.innerHTML = originalHtml;
+                        btnElement.classList.remove('bg-emerald-50', 'text-emerald-700', 'border-emerald-200');
+                        btnElement.classList.add('bg-slate-100', 'text-slate-600', 'border-slate-200');
+                    }, 2500);
+                }
+            } catch (err) { console.error('Failed to copy URL', err); }
+            document.body.removeChild(textArea);
+        }
+
+        function renderDocuments(data) {
+            const tbody = document.getElementById('document-table-body');
+            tbody.innerHTML = '';
+            data.forEach(row => {
+                const hasDraft = !!(row.DraftPdfId && row.DraftPdfId.trim() !== '');
+                const hasFinal = !!(row.FinalPdfId && row.FinalPdfId.trim() !== '');
+                const isApproved = (row.Status || '').toLowerCase() === 'approved';
+
+                const draftUrl = hasDraft ? getPdfUrl(row.DraftPdfId.trim()) : '#';
+                const finalUrl = hasFinal ? getPdfUrl(row.FinalPdfId.trim()) : '#';
+
+                const clientName = row.ClientAckName || 'Sir/Madam';
+                const plantName = row.PlantName || 'related plant';
+                const rawPhone = row.ClientAckPhone || '';
+                const waPhone = formatPhoneForWa(rawPhone);
+                const emailAddr = row.ClientEmail || '';
+                const approvalUrl = row.ApprovalToken ? `${APP_SCRIPT_URL}?token=${row.ApprovalToken.trim()}` : '';
+
+                let subject = '', bodyMsg = '', waBodyMsg = '';
+                if (isApproved) {
+                    subject = `Service Report Completed - ${row.ReportID}`;
+                    bodyMsg = `Hi ${clientName},\n\nThank you for reviewing and approving the service report for ${plantName}.\n\nA copy of the final report is attached.\n\nThank you from Sungrow.`;
+                    waBodyMsg = bodyMsg;
+                } else {
+                    subject = `Action Required: Unapproved Service Report - ${row.ReportID}`;
+                    bodyMsg = `Hi ${clientName},\n\nPlease be informed that the service report for ${plantName} is still pending approval. Please review the draft report and provide your approval.\n\nPlease click this link: ${approvalUrl}\n\nThank you from Sungrow.`;
+                    waBodyMsg = `Here is the Field Service Report | ${plantName} | ${row.ReportDate || ''}\nPlease click the link below to approve this service report\n\n${approvalUrl}\n\nSungrow TEAM`;
+                }
+
+                const mailtoLink = `mailto:${emailAddr}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyMsg)}`;
+                const waLink = waPhone ? `https://wa.me/${waPhone}?text=${encodeURIComponent(waBodyMsg)}` : '#';
+
+                let approvalStatusHtml = '';
+                if (isApproved) {
+                    approvalStatusHtml = `<span class="flex items-center text-emerald-600 text-sm font-medium"><i class="fa-solid fa-check-circle mr-1.5"></i> Client Signed</span>
+                        <div class="mt-1">${starDisplayHtml(row.ServiceRating)}</div>`;
+                } else {
+                    approvalStatusHtml = `<span class="flex items-center text-amber-500 text-sm font-medium"><i class="fa-regular fa-clock mr-1.5"></i> Pending Sign</span>
+                        ${row.ApprovalToken ? `<div class="mt-2"><button onclick="copyToClipboard('${approvalUrl}', this)" class="text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium py-1 px-2 rounded border border-slate-200 transition flex items-center w-max cursor-pointer"><i class="fa-regular fa-copy mr-1"></i> Copy Approval Link</button></div>` : `<div class="text-[10px] text-slate-400 mt-1 italic">No Token</div>`}`;
+                }
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 border-b border-slate-50 transition">
+                        <td class="px-6 py-4"><div class="font-bold text-brand-600">${escapeHtml(row.ReportID) || '-'}</div><div class="text-xs text-slate-500 mt-1">${escapeHtml(row.PlantName) || '-'} | ${escapeHtml(row.ReportDate) || '-'}</div></td>
+                        <td class="px-6 py-4"><div class="text-slate-800 font-medium">${escapeHtml(clientName)}</div><div class="text-xs text-slate-500">${escapeHtml(row.ClientAckCompany) || '-'}</div></td>
+                        <td class="px-6 py-4">${hasDraft ? `<a href="${draftUrl}" target="_blank" class="inline-flex text-brand-600 bg-brand-50 hover:bg-brand-100 px-3 py-1.5 rounded text-xs font-medium border border-brand-200 transition items-center w-max"><i class="fa-regular fa-file-pdf mr-1.5 text-red-500"></i> View Draft</a>` : `<span class="text-xs text-slate-400 italic">No Draft</span>`}</td>
+                        <td class="px-6 py-4">${approvalStatusHtml}</td>
+                        <td class="px-6 py-4">${hasFinal ? `<a href="${finalUrl}" target="_blank" class="inline-flex text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded text-xs font-medium border border-slate-300 transition items-center w-max"><i class="fa-solid fa-file-pdf mr-1.5 text-red-600"></i> Download Final</a>` : `<span class="text-xs text-slate-400 italic">Not Generated</span>`}</td>
+                        <td class="px-6 py-4 text-right">
+                            <a href="${emailAddr ? mailtoLink : '#'}" class="inline-block ${emailAddr ? 'text-slate-500 hover:text-brand-600' : 'text-slate-300 cursor-not-allowed'} transition p-2" title="${emailAddr ? 'Send Email' : 'No Client Email'}"><i class="fa-solid fa-envelope text-lg"></i></a>
+                            <a href="${waLink}" target="${waPhone ? '_blank' : '_self'}" class="inline-block ${waPhone ? 'text-slate-500 hover:text-green-500' : 'text-slate-300 cursor-not-allowed'} transition p-2" title="${waPhone ? 'Send WhatsApp' : 'No Phone Number'}"><i class="fa-brands fa-whatsapp text-lg"></i></a>
+                        </td>
+                    </tr>`;
+            });
+        }
+
+        function filterDocs() {
+            const searchVal = document.getElementById('search-doc').value.toLowerCase();
+            const filteredData = dateFilteredData.filter(row => (row.ReportID || '').toLowerCase().includes(searchVal) || (row.PlantName || '').toLowerCase().includes(searchVal));
+            renderDocuments(filteredData);
+        }
+    </script>
+</body>
+</html>
