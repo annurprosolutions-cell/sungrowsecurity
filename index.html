@@ -555,8 +555,9 @@
 
     <script>
         const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzsKcGqoxLpfhrGMErOyj7LvU3mbcMW4lAphYtDpuiz0QjHresectmXMNHMMl87QijD_w/exec";
-        const ENGINEER_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTedYI72qkffFMoxGW4z-5FV_UfqXg--f6ql5bnGbkB3kiNes5b3nqUm8umfjJ1wb5mRGyRkLeMh4ua/pub?gid=33758384&single=true&output=csv";
-        const EQUIPMENT_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTedYI72qkffFMoxGW4z-5FV_UfqXg--f6ql5bnGbkB3kiNes5b3nqUm8umfjJ1wb5mRGyRkLeMh4ua/pub?gid=27746818&single=true&output=csv";
+        // SECURITY: the old public "Publish to Web" CSV URLs (ENGINEER_CSV_URL / EQUIPMENT_CSV_URL)
+        // have been removed entirely - they are no longer referenced anywhere in this file (all
+        // dropdown/reference data now goes through WEB_APP_URL's session-gated actions instead).
 
         let loggedInUser = { name: '', role: '' };
         const SESSION_TTL_HOURS = 12; // must match SESSION_TTL_HOURS in Code.gs
