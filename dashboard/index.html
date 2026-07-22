@@ -766,10 +766,10 @@
     </main>
 
     <script>
-        const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTedYI72qkffFMoxGW4z-5FV_UfqXg--f6ql5bnGbkB3kiNes5b3nqUm8umfjJ1wb5mRGyRkLeMh4ua/pub?output=csv'; 
-        const ENGINEER_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTedYI72qkffFMoxGW4z-5FV_UfqXg--f6ql5bnGbkB3kiNes5b3nqUm8umfjJ1wb5mRGyRkLeMh4ua/pub?gid=33758384&single=true&output=csv';
-        const PROJECT_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTedYI72qkffFMoxGW4z-5FV_UfqXg--f6ql5bnGbkB3kiNes5b3nqUm8umfjJ1wb5mRGyRkLeMh4ua/pub?gid=27746818&single=true&output=csv';
-        const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzsKcGqoxLpfhrGMErOyj7LvU3mbcMW4lAphYtDpuiz0QjHresectmXMNHMMl87QijD_w/exec'; 
+        // SECURITY: the old public "Publish to Web" CSV URLs (SHEET_CSV_URL / ENGINEER_CSV_URL /
+        // PROJECT_CSV_URL) have been removed entirely - they are no longer referenced anywhere in
+        // this file (all data now goes through APP_SCRIPT_URL's session-gated actions instead).
+        const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzsKcGqoxLpfhrGMErOyj7LvU3mbcMW4lAphYtDpuiz0QjHresectmXMNHMMl87QijD_w/exec';
 
         let globalData = [];
         let dateFilteredData = [];
@@ -840,7 +840,7 @@
             }
             localStorage.removeItem('sungrowUser');
             setTimeout(() => {
-                window.location.href = 'https://sungrowutilityservice-ai.github.io/fieldreportform/';
+                window.location.href = 'https://annurprosolutions-cell.github.io/sungrowsecurity/';
             }, 1200);
         }
 
@@ -1093,7 +1093,7 @@
             // --- SESSION CONTROL & RBAC ---
             const sessionStr = localStorage.getItem('sungrowUser');
             if (!sessionStr) {
-                window.location.href = 'https://sungrowutilityservice-ai.github.io/fieldreportform/';
+                window.location.href = 'https://annurprosolutions-cell.github.io/sungrowsecurity/';
                 return;
             }
             loggedInUser = JSON.parse(sessionStr);
@@ -1103,13 +1103,13 @@
             const hoursSinceLogin = loggedInUser.loginTime ? (Date.now() - loggedInUser.loginTime) / 3600000 : 999;
             if (!loggedInUser.sessionToken || hoursSinceLogin >= SESSION_TTL_HOURS) {
                 localStorage.removeItem('sungrowUser');
-                window.location.href = 'https://sungrowutilityservice-ai.github.io/fieldreportform/';
+                window.location.href = 'https://annurprosolutions-cell.github.io/sungrowsecurity/';
                 return;
             }
 
             const roleStr = (loggedInUser.role || '').toLowerCase();
             if (roleStr.includes('partner')) {
-                window.location.href = 'https://sungrowutilityservice-ai.github.io/fieldreportform/';
+                window.location.href = 'https://annurprosolutions-cell.github.io/sungrowsecurity/';
                 return;
             }
             isManager = roleStr.includes('manager');
