@@ -471,6 +471,7 @@
                                     <th class="px-6 py-4 font-medium">Approval Status</th>
                                     <th class="px-6 py-4 font-medium">Final PDF</th>
                                     <th class="px-6 py-4 font-medium text-right">Action</th>
+                                    <th class="px-6 py-4 font-medium text-right">Manage</th>
                                 </tr>
                             </thead>
                             <tbody id="document-table-body" class="divide-y divide-slate-100"></tbody>
@@ -769,7 +770,7 @@
         // SECURITY: the old public "Publish to Web" CSV URLs (SHEET_CSV_URL / ENGINEER_CSV_URL /
         // PROJECT_CSV_URL) have been removed entirely - they are no longer referenced anywhere in
         // this file (all data now goes through APP_SCRIPT_URL's session-gated actions instead).
-        const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzsKcGqoxLpfhrGMErOyj7LvU3mbcMW4lAphYtDpuiz0QjHresectmXMNHMMl87QijD_w/exec';
+        const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwMkn-M-5mKrTnSjSOQt85Mhyu0dPBEMdmHTvkcUMs39SbMaG7uXwACCk14fLaPW3Cf4Q/exec';
 
         let globalData = [];
         let dateFilteredData = [];
@@ -864,6 +865,12 @@
         // ==========================================
         // MODAL EDIT & DELETE FUNCTIONS
         // ==========================================
+        function promptDeleteReport(reportId, plantName) {
+            document.getElementById('confirmDeleteText').innerHTML = `Are you sure you want to delete report <b>${escapeHtml(reportId)}</b> (${escapeHtml(plantName)})?<br>This action cannot be undone - use this to remove a mistaken or duplicate entry.`;
+            pendingDeleteAction = { type: 'report', reportId: reportId };
+            document.getElementById('confirmDeleteModal').style.display = 'flex';
+        }
+
         function promptDeleteEngineer(name) {
             document.getElementById('confirmDeleteText').innerHTML = `Are you sure you want to delete engineer <b>${name}</b>?<br>This action cannot be undone.`;
             pendingDeleteAction = { type: 'engineer', name: name };
@@ -894,6 +901,7 @@
 
             let actionKey = '';
             let reqBody = {};
+            const deleteType = pendingDeleteAction.type; // captured before closeConfirmDelete() clears pendingDeleteAction
 
             if (pendingDeleteAction.type === 'engineer') {
                 actionKey = 'delete_engineer';
@@ -901,6 +909,9 @@
             } else if (pendingDeleteAction.type === 'equipment') {
                 actionKey = 'delete_project_equipment';
                 reqBody = { action: actionKey, sessionToken: loggedInUser.sessionToken, projectName: pendingDeleteAction.project, model: pendingDeleteAction.model, serial: pendingDeleteAction.serial };
+            } else if (pendingDeleteAction.type === 'report') {
+                actionKey = 'delete_report';
+                reqBody = { action: actionKey, sessionToken: loggedInUser.sessionToken, reportId: pendingDeleteAction.reportId };
             }
 
             try {
@@ -911,7 +922,7 @@
                 closeConfirmDelete();
                 if(data.status === 'success') {
                     showMessageModal(data.message, "Deleted Successfully");
-                    fetchReferences();
+                    if (deleteType === 'report') { fetchData(); } else { fetchReferences(); }
                 } else {
                     showMessageModal("Error: " + data.message, "Failed");
                 }
@@ -2729,6 +2740,15 @@
                 const mailtoLink = `mailto:${emailAddr}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyMsg)}`;
                 const waLink = waPhone ? `https://wa.me/${waPhone}?text=${encodeURIComponent(waBodyMsg)}` : '#';
 
+                // Delete allowed for: Manager (any report), or the engineer who owns this report
+                // (fixes mistaken/duplicate entries without needing to key in the whole form twice).
+                const myNameLc = (loggedInUser.name || '').toLowerCase().split('(')[0].trim();
+                const ownsThisReport = (row.ServiceEngineer || '').toString().toLowerCase().includes(myNameLc);
+                const canDeleteThisReport = isManager || ownsThisReport;
+                const deleteCellHtml = canDeleteThisReport
+                    ? `<button onclick="promptDeleteReport('${escJsAttr(row.ReportID)}', '${escJsAttr(row.PlantName || 'this report')}')" class="inline-block text-slate-400 hover:text-red-500 transition p-2" title="Delete Report"><i class="fa-solid fa-trash text-lg"></i></button>`
+                    : `<span class="text-xs text-slate-300">&mdash;</span>`;
+
                 let approvalStatusHtml = '';
                 if (isApproved) {
                     approvalStatusHtml = `<span class="flex items-center text-emerald-600 text-sm font-medium"><i class="fa-solid fa-check-circle mr-1.5"></i> Client Signed</span>
@@ -2749,6 +2769,7 @@
                             <a href="${emailAddr ? mailtoLink : '#'}" class="inline-block ${emailAddr ? 'text-slate-500 hover:text-brand-600' : 'text-slate-300 cursor-not-allowed'} transition p-2" title="${emailAddr ? 'Send Email' : 'No Client Email'}"><i class="fa-solid fa-envelope text-lg"></i></a>
                             <a href="${waLink}" target="${waPhone ? '_blank' : '_self'}" class="inline-block ${waPhone ? 'text-slate-500 hover:text-green-500' : 'text-slate-300 cursor-not-allowed'} transition p-2" title="${waPhone ? 'Send WhatsApp' : 'No Phone Number'}"><i class="fa-brands fa-whatsapp text-lg"></i></a>
                         </td>
+                        <td class="px-6 py-4 text-right">${deleteCellHtml}</td>
                     </tr>`;
             });
         }
